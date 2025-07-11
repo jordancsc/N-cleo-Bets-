@@ -253,9 +253,8 @@ const RegisterForm = ({ onToggle }) => {
   );
 };
 
-const Navigation = () => {
+const Navigation = ({ activeTab, setActiveTab }) => {
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState('predictions');
 
   return (
     <nav className="bg-slate-900 border-b border-purple-500/30">
@@ -269,24 +268,14 @@ const Navigation = () => {
           
           <div className="flex space-x-4">
             <button
-              onClick={() => setActiveTab('predictions')}
+              onClick={() => setActiveTab('analyses')}
               className={`px-4 py-2 rounded-lg transition-all duration-200 ${
-                activeTab === 'predictions'
+                activeTab === 'analyses'
                   ? 'bg-purple-600 text-white'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
               }`}
             >
-              Predições IA
-            </button>
-            <button
-              onClick={() => setActiveTab('tips')}
-              className={`px-4 py-2 rounded-lg transition-all duration-200 ${
-                activeTab === 'tips'
-                  ? 'bg-purple-600 text-white'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              Palpites Admin
+              Análises
             </button>
             {user?.role === 'admin' && (
               <button
@@ -320,16 +309,17 @@ const Navigation = () => {
 };
 
 const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState('predictions');
-  const [tips, setTips] = useState([]);
-  const [predictions, setPredictions] = useState([]);
+  const [activeTab, setActiveTab] = useState('analyses');
+  const [analyses, setAnalyses] = useState([]);
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
-  const [newTip, setNewTip] = useState({
+  const [editingAnalysis, setEditingAnalysis] = useState(null);
+  const [newAnalysis, setNewAnalysis] = useState({
+    title: '',
     match_info: '',
     prediction: '1',
     confidence: 0,
-    reasoning: '',
+    detailed_analysis: '',
     odds: '',
     match_date: ''
   });
@@ -337,8 +327,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchStats();
-    fetchTips();
-    fetchPredictions();
+    fetchAnalyses();
     if (user?.role === 'admin') {
       fetchUsers();
     }
@@ -353,21 +342,12 @@ const Dashboard = () => {
     }
   };
 
-  const fetchTips = async () => {
+  const fetchAnalyses = async () => {
     try {
-      const response = await axios.get(`${API}/tips`);
-      setTips(response.data);
+      const response = await axios.get(`${API}/analysis`);
+      setAnalyses(response.data);
     } catch (error) {
-      console.error('Error fetching tips:', error);
-    }
-  };
-
-  const fetchPredictions = async () => {
-    try {
-      const response = await axios.get(`${API}/predictions`);
-      setPredictions(response.data);
-    } catch (error) {
-      console.error('Error fetching predictions:', error);
+      console.error('Error fetching analyses:', error);
     }
   };
 
@@ -380,21 +360,47 @@ const Dashboard = () => {
     }
   };
 
-  const handleCreateTip = async (e) => {
+  const handleCreateAnalysis = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${API}/admin/tips`, newTip);
-      setNewTip({
+      await axios.post(`${API}/admin/analysis`, newAnalysis);
+      setNewAnalysis({
+        title: '',
         match_info: '',
         prediction: '1',
         confidence: 0,
-        reasoning: '',
+        detailed_analysis: '',
         odds: '',
         match_date: ''
       });
-      fetchTips();
+      fetchAnalyses();
+      fetchStats();
     } catch (error) {
-      console.error('Error creating tip:', error);
+      console.error('Error creating analysis:', error);
+    }
+  };
+
+  const handleUpdateAnalysis = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`${API}/admin/analysis/${editingAnalysis.id}`, editingAnalysis);
+      setEditingAnalysis(null);
+      fetchAnalyses();
+      fetchStats();
+    } catch (error) {
+      console.error('Error updating analysis:', error);
+    }
+  };
+
+  const deleteAnalysis = async (analysisId) => {
+    if (window.confirm('Tem certeza que deseja deletar esta análise?')) {
+      try {
+        await axios.delete(`${API}/admin/analysis/${analysisId}`);
+        fetchAnalyses();
+        fetchStats();
+      } catch (error) {
+        console.error('Error deleting analysis:', error);
+      }
     }
   };
 
@@ -416,160 +422,113 @@ const Dashboard = () => {
     }
   };
 
+  const deleteUser = async (userId) => {
+    if (window.confirm('Tem certeza que deseja deletar este usuário permanentemente?')) {
+      try {
+        await axios.delete(`${API}/admin/delete-user/${userId}`);
+        fetchUsers();
+      } catch (error) {
+        console.error('Error deleting user:', error);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <Navigation />
+      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Section */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div className="bg-slate-800 rounded-xl p-6 border border-purple-500/30">
-              <h3 className="text-xl font-semibold text-purple-400 mb-4">Palpites Admin</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-400">{stats.admin_tips.won}</div>
-                  <div className="text-slate-400">Acertos</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-red-400">{stats.admin_tips.lost}</div>
-                  <div className="text-slate-400">Erros</div>
-                </div>
+          <div className="bg-slate-800 rounded-xl p-6 border border-purple-500/30 mb-8">
+            <h3 className="text-xl font-semibold text-purple-400 mb-4">Estatísticas das Análises</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-purple-400">{stats.total_analyses}</div>
+                <div className="text-slate-400">Total</div>
               </div>
-              <div className="mt-4 text-center">
-                <div className="text-2xl font-bold text-purple-400">{stats.admin_tips.accuracy}%</div>
-                <div className="text-slate-400">Precisão</div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-green-400">{stats.won}</div>
+                <div className="text-slate-400">Acertos</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-red-400">{stats.lost}</div>
+                <div className="text-slate-400">Erros</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-yellow-400">{stats.pending}</div>
+                <div className="text-slate-400">Pendentes</div>
               </div>
             </div>
-            
-            <div className="bg-slate-800 rounded-xl p-6 border border-purple-500/30">
-              <h3 className="text-xl font-semibold text-purple-400 mb-4">Predições IA</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-400">{stats.ai_predictions.won}</div>
-                  <div className="text-slate-400">Acertos</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-red-400">{stats.ai_predictions.lost}</div>
-                  <div className="text-slate-400">Erros</div>
-                </div>
-              </div>
-              <div className="mt-4 text-center">
-                <div className="text-2xl font-bold text-purple-400">{stats.ai_predictions.accuracy}%</div>
-                <div className="text-slate-400">Precisão</div>
-              </div>
+            <div className="mt-4 text-center">
+              <div className="text-2xl font-bold text-purple-400">{stats.accuracy}%</div>
+              <div className="text-slate-400">Precisão</div>
             </div>
           </div>
         )}
-
-        {/* Navigation Tabs */}
-        <div className="flex space-x-4 mb-8">
-          <button
-            onClick={() => setActiveTab('predictions')}
-            className={`px-6 py-3 rounded-lg transition-all duration-200 ${
-              activeTab === 'predictions'
-                ? 'bg-purple-600 text-white shadow-lg'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            Predições IA
-          </button>
-          <button
-            onClick={() => setActiveTab('tips')}
-            className={`px-6 py-3 rounded-lg transition-all duration-200 ${
-              activeTab === 'tips'
-                ? 'bg-purple-600 text-white shadow-lg'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            Palpites Admin
-          </button>
-          {user?.role === 'admin' && (
-            <button
-              onClick={() => setActiveTab('admin')}
-              className={`px-6 py-3 rounded-lg transition-all duration-200 ${
-                activeTab === 'admin'
-                  ? 'bg-purple-600 text-white shadow-lg'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              Admin
-            </button>
-          )}
-        </div>
 
         {/* Content Sections */}
-        {activeTab === 'predictions' && (
+        {activeTab === 'analyses' && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-white mb-6">Predições com IA</h2>
-            {predictions.length === 0 ? (
-              <div className="bg-slate-800 rounded-xl p-8 border border-purple-500/30 text-center">
-                <p className="text-slate-400">Nenhuma predição disponível no momento.</p>
-                <p className="text-slate-500 mt-2">As predições com IA estarão disponíveis em breve!</p>
-              </div>
-            ) : (
-              <div className="grid gap-6">
-                {predictions.map((prediction) => (
-                  <div key={prediction.id} className="bg-slate-800 rounded-xl p-6 border border-purple-500/30">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="text-xl font-semibold text-white">
-                          {prediction.home_team} vs {prediction.away_team}
-                        </h3>
-                        <p className="text-slate-400">{prediction.league}</p>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-purple-400">
-                          {prediction.prediction === '1' ? 'Casa' : prediction.prediction === 'X' ? 'Empate' : 'Fora'}
-                        </div>
-                        <div className="text-sm text-slate-400">{prediction.confidence}% confiança</div>
-                      </div>
-                    </div>
-                    <div className="text-sm text-slate-300">
-                      {new Date(prediction.match_date).toLocaleDateString('pt-BR')}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'tips' && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-white mb-6">Palpites do Admin</h2>
+            <h2 className="text-2xl font-bold text-white mb-6">Análises de Futebol</h2>
             <div className="grid gap-6">
-              {tips.map((tip) => (
-                <div key={tip.id} className="bg-slate-800 rounded-xl p-6 border border-purple-500/30">
+              {analyses.map((analysis) => (
+                <div key={analysis.id} className="bg-slate-800 rounded-xl p-6 border border-purple-500/30">
                   <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-semibold text-white">{tip.match_info}</h3>
-                      <p className="text-slate-400 mt-2">{tip.reasoning}</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-purple-400">
-                        {tip.prediction === '1' ? 'Casa' : tip.prediction === 'X' ? 'Empate' : 'Fora'}
+                    <div className="flex-1">
+                      <h3 className="text-xl font-semibold text-white">{analysis.title}</h3>
+                      <p className="text-slate-400 mt-1">{analysis.match_info}</p>
+                      <div className="mt-4 text-slate-300">
+                        <p className="whitespace-pre-wrap">{analysis.detailed_analysis}</p>
                       </div>
-                      <div className="text-sm text-slate-400">{tip.confidence}% confiança</div>
-                      {tip.odds && (
-                        <div className="text-sm text-green-400">Odds: {tip.odds}</div>
+                    </div>
+                    <div className="text-right ml-4">
+                      <div className="text-lg font-bold text-purple-400">
+                        {analysis.prediction === '1' ? 'Casa' : analysis.prediction === 'X' ? 'Empate' : 'Fora'}
+                      </div>
+                      <div className="text-sm text-slate-400">{analysis.confidence}% confiança</div>
+                      {analysis.odds && (
+                        <div className="text-sm text-green-400">Odds: {analysis.odds}</div>
                       )}
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
                     <div className="text-sm text-slate-300">
-                      {new Date(tip.match_date).toLocaleDateString('pt-BR')}
+                      {new Date(analysis.match_date).toLocaleDateString('pt-BR')}
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-xs ${
-                      tip.status === 'won' ? 'bg-green-500/20 text-green-400' :
-                      tip.status === 'lost' ? 'bg-red-500/20 text-red-400' :
-                      'bg-yellow-500/20 text-yellow-400'
-                    }`}>
-                      {tip.status === 'won' ? 'Ganhou' : tip.status === 'lost' ? 'Perdeu' : 'Pendente'}
+                    <div className="flex items-center space-x-3">
+                      <div className={`px-3 py-1 rounded-full text-xs ${
+                        analysis.status === 'won' ? 'bg-green-500/20 text-green-400' :
+                        analysis.status === 'lost' ? 'bg-red-500/20 text-red-400' :
+                        'bg-yellow-500/20 text-yellow-400'
+                      }`}>
+                        {analysis.status === 'won' ? 'Ganhou' : analysis.status === 'lost' ? 'Perdeu' : 'Pendente'}
+                      </div>
+                      {user?.role === 'admin' && (
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => setEditingAnalysis(analysis)}
+                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => deleteAnalysis(analysis.id)}
+                            className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg transition-colors"
+                          >
+                            Deletar
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               ))}
+              {analyses.length === 0 && (
+                <div className="bg-slate-800 rounded-xl p-8 border border-purple-500/30 text-center">
+                  <p className="text-slate-400">Nenhuma análise disponível no momento.</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -578,66 +537,131 @@ const Dashboard = () => {
           <div className="space-y-8">
             <h2 className="text-2xl font-bold text-white mb-6">Painel Admin</h2>
             
-            {/* Create Tip Form */}
+            {/* Create/Edit Analysis Form */}
             <div className="bg-slate-800 rounded-xl p-6 border border-purple-500/30">
-              <h3 className="text-xl font-semibold text-purple-400 mb-4">Criar Novo Palpite</h3>
-              <form onSubmit={handleCreateTip} className="space-y-4">
+              <h3 className="text-xl font-semibold text-purple-400 mb-4">
+                {editingAnalysis ? 'Editar Análise' : 'Criar Nova Análise'}
+              </h3>
+              <form onSubmit={editingAnalysis ? handleUpdateAnalysis : handleCreateAnalysis} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <input
                     type="text"
-                    placeholder="Informações da partida"
-                    value={newTip.match_info}
-                    onChange={(e) => setNewTip({...newTip, match_info: e.target.value})}
+                    placeholder="Título da análise"
+                    value={editingAnalysis ? editingAnalysis.title : newAnalysis.title}
+                    onChange={(e) => editingAnalysis ? 
+                      setEditingAnalysis({...editingAnalysis, title: e.target.value}) :
+                      setNewAnalysis({...newAnalysis, title: e.target.value})
+                    }
                     className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                     required
                   />
+                  <input
+                    type="text"
+                    placeholder="Informações da partida"
+                    value={editingAnalysis ? editingAnalysis.match_info : newAnalysis.match_info}
+                    onChange={(e) => editingAnalysis ? 
+                      setEditingAnalysis({...editingAnalysis, match_info: e.target.value}) :
+                      setNewAnalysis({...newAnalysis, match_info: e.target.value})
+                    }
+                    className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <select
-                    value={newTip.prediction}
-                    onChange={(e) => setNewTip({...newTip, prediction: e.target.value})}
+                    value={editingAnalysis ? editingAnalysis.prediction : newAnalysis.prediction}
+                    onChange={(e) => editingAnalysis ? 
+                      setEditingAnalysis({...editingAnalysis, prediction: e.target.value}) :
+                      setNewAnalysis({...newAnalysis, prediction: e.target.value})
+                    }
                     className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                   >
                     <option value="1">Casa</option>
                     <option value="X">Empate</option>
                     <option value="2">Fora</option>
                   </select>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <input
                     type="number"
                     placeholder="Confiança (%)"
-                    value={newTip.confidence}
-                    onChange={(e) => setNewTip({...newTip, confidence: parseFloat(e.target.value)})}
+                    value={editingAnalysis ? editingAnalysis.confidence : newAnalysis.confidence}
+                    onChange={(e) => editingAnalysis ? 
+                      setEditingAnalysis({...editingAnalysis, confidence: parseFloat(e.target.value)}) :
+                      setNewAnalysis({...newAnalysis, confidence: parseFloat(e.target.value)})
+                    }
                     className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                     required
                   />
                   <input
                     type="text"
                     placeholder="Odds (opcional)"
-                    value={newTip.odds}
-                    onChange={(e) => setNewTip({...newTip, odds: e.target.value})}
+                    value={editingAnalysis ? editingAnalysis.odds : newAnalysis.odds}
+                    onChange={(e) => editingAnalysis ? 
+                      setEditingAnalysis({...editingAnalysis, odds: e.target.value}) :
+                      setNewAnalysis({...newAnalysis, odds: e.target.value})
+                    }
                     className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                   <input
                     type="datetime-local"
-                    value={newTip.match_date}
-                    onChange={(e) => setNewTip({...newTip, match_date: e.target.value})}
+                    value={editingAnalysis ? editingAnalysis.match_date : newAnalysis.match_date}
+                    onChange={(e) => editingAnalysis ? 
+                      setEditingAnalysis({...editingAnalysis, match_date: e.target.value}) :
+                      setNewAnalysis({...newAnalysis, match_date: e.target.value})
+                    }
                     className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                     required
                   />
                 </div>
+                {editingAnalysis && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <select
+                      value={editingAnalysis.result || ''}
+                      onChange={(e) => setEditingAnalysis({...editingAnalysis, result: e.target.value})}
+                      className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="">Resultado (opcional)</option>
+                      <option value="1">Casa</option>
+                      <option value="X">Empate</option>
+                      <option value="2">Fora</option>
+                    </select>
+                    <select
+                      value={editingAnalysis.status}
+                      onChange={(e) => setEditingAnalysis({...editingAnalysis, status: e.target.value})}
+                      className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="pending">Pendente</option>
+                      <option value="won">Ganhou</option>
+                      <option value="lost">Perdeu</option>
+                    </select>
+                  </div>
+                )}
                 <textarea
-                  placeholder="Justificativa do palpite"
-                  value={newTip.reasoning}
-                  onChange={(e) => setNewTip({...newTip, reasoning: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 h-24 resize-none"
+                  placeholder="Análise detalhada"
+                  value={editingAnalysis ? editingAnalysis.detailed_analysis : newAnalysis.detailed_analysis}
+                  onChange={(e) => editingAnalysis ? 
+                    setEditingAnalysis({...editingAnalysis, detailed_analysis: e.target.value}) :
+                    setNewAnalysis({...newAnalysis, detailed_analysis: e.target.value})
+                  }
+                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 resize-none"
                   required
                 />
-                <button
-                  type="submit"
-                  className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-medium rounded-lg transition-all duration-200"
-                >
-                  Criar Palpite
-                </button>
+                <div className="flex space-x-4">
+                  <button
+                    type="submit"
+                    className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-medium rounded-lg transition-all duration-200"
+                  >
+                    {editingAnalysis ? 'Atualizar Análise' : 'Criar Análise'}
+                  </button>
+                  {editingAnalysis && (
+                    <button
+                      type="button"
+                      onClick={() => setEditingAnalysis(null)}
+                      className="px-6 py-3 bg-slate-600 hover:bg-slate-700 text-white font-medium rounded-lg transition-all duration-200"
+                    >
+                      Cancelar
+                    </button>
+                  )}
+                </div>
               </form>
             </div>
 
@@ -651,7 +675,7 @@ const Dashboard = () => {
                       <div className="text-white font-medium">{user.username}</div>
                       <div className="text-slate-400 text-sm">{user.email}</div>
                     </div>
-                    <div className="flex space-x-2">
+                    <div className="flex items-center space-x-2">
                       <span className={`px-3 py-1 rounded-full text-xs ${
                         user.approved_by_admin ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
                       }`}>
@@ -668,9 +692,17 @@ const Dashboard = () => {
                       {user.is_active && (
                         <button
                           onClick={() => deactivateUser(user.id)}
-                          className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg transition-colors"
+                          className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white text-xs rounded-lg transition-colors"
                         >
                           Desativar
+                        </button>
+                      )}
+                      {user.role !== 'admin' && (
+                        <button
+                          onClick={() => deleteUser(user.id)}
+                          className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg transition-colors"
+                        >
+                          Deletar
                         </button>
                       )}
                     </div>

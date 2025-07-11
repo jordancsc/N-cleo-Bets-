@@ -23,7 +23,7 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # Create the main app without a prefix
-app = FastAPI(title="Núcleo Bets API", description="Sistema de predições de futebol com IA")
+app = FastAPI(title="Núcleo Bets API", description="Sistema de análises de futebol")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -41,7 +41,7 @@ class UserRole(str, Enum):
     ADMIN = "admin"
     USER = "user"
 
-class PredictionStatus(str, Enum):
+class AnalysisStatus(str, Enum):
     PENDING = "pending"
     WON = "won"
     LOST = "lost"
@@ -76,42 +76,38 @@ class Token(BaseModel):
     token_type: str
     user: dict
 
-class AdminTip(BaseModel):
+class Analysis(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
     match_info: str
     prediction: MatchResult
     confidence: float
-    reasoning: str
+    detailed_analysis: str
     odds: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     match_date: datetime
     result: Optional[MatchResult] = None
-    status: PredictionStatus = PredictionStatus.PENDING
+    status: AnalysisStatus = AnalysisStatus.PENDING
 
-class AdminTipCreate(BaseModel):
+class AnalysisCreate(BaseModel):
+    title: str
     match_info: str
     prediction: MatchResult
     confidence: float
-    reasoning: str
+    detailed_analysis: str
     odds: Optional[str] = None
     match_date: datetime
 
-class AdminTipUpdate(BaseModel):
-    result: MatchResult
-    status: PredictionStatus
-
-class AIPrediction(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    home_team: str
-    away_team: str
-    league: str
-    prediction: MatchResult
-    confidence: float
-    mathematical_analysis: dict
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    match_date: datetime
+class AnalysisUpdate(BaseModel):
+    title: Optional[str] = None
+    match_info: Optional[str] = None
+    prediction: Optional[MatchResult] = None
+    confidence: Optional[float] = None
+    detailed_analysis: Optional[str] = None
+    odds: Optional[str] = None
+    match_date: Optional[datetime] = None
     result: Optional[MatchResult] = None
-    status: PredictionStatus = PredictionStatus.PENDING
+    status: Optional[AnalysisStatus] = None
 
 # Utility functions
 def hash_password(password: str) -> str:
@@ -153,7 +149,7 @@ async def get_admin_user(current_user: User = Depends(get_current_user)):
 # Routes
 @api_router.get("/")
 async def root():
-    return {"message": "Núcleo Bets API - Sistema de Predições de Futebol"}
+    return {"message": "Núcleo Bets API - Sistema de Análises de Futebol"}
 
 # Authentication routes
 @api_router.post("/auth/register", response_model=dict)
@@ -233,77 +229,71 @@ async def deactivate_user(user_id: str, admin_user: User = Depends(get_admin_use
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     return {"message": "Usuário desativado com sucesso"}
 
-# Admin Tips routes
-@api_router.post("/admin/tips", response_model=AdminTip)
-async def create_admin_tip(tip_data: AdminTipCreate, admin_user: User = Depends(get_admin_user)):
-    tip = AdminTip(**tip_data.dict())
-    await db.admin_tips.insert_one(tip.dict())
-    return tip
+@api_router.delete("/admin/delete-user/{user_id}")
+async def delete_user(user_id: str, admin_user: User = Depends(get_admin_user)):
+    # Prevent admin from deleting themselves
+    if user_id == admin_user.id:
+        raise HTTPException(status_code=400, detail="Não é possível deletar sua própria conta")
+    
+    result = await db.users.delete_one({"id": user_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    return {"message": "Usuário deletado com sucesso"}
 
-@api_router.get("/admin/tips", response_model=List[AdminTip])
-async def get_admin_tips(admin_user: User = Depends(get_admin_user)):
-    tips = await db.admin_tips.find().sort("created_at", -1).to_list(1000)
-    return [AdminTip(**tip) for tip in tips]
+# Analysis routes
+@api_router.post("/admin/analysis", response_model=Analysis)
+async def create_analysis(analysis_data: AnalysisCreate, admin_user: User = Depends(get_admin_user)):
+    analysis = Analysis(**analysis_data.dict())
+    await db.analyses.insert_one(analysis.dict())
+    return analysis
 
-@api_router.put("/admin/tips/{tip_id}", response_model=AdminTip)
-async def update_admin_tip(tip_id: str, tip_update: AdminTipUpdate, admin_user: User = Depends(get_admin_user)):
-    result = await db.admin_tips.update_one(
-        {"id": tip_id},
-        {"$set": tip_update.dict()}
+@api_router.get("/admin/analysis", response_model=List[Analysis])
+async def get_admin_analyses(admin_user: User = Depends(get_admin_user)):
+    analyses = await db.analyses.find().sort("created_at", -1).to_list(1000)
+    return [Analysis(**analysis) for analysis in analyses]
+
+@api_router.put("/admin/analysis/{analysis_id}", response_model=Analysis)
+async def update_analysis(analysis_id: str, analysis_update: AnalysisUpdate, admin_user: User = Depends(get_admin_user)):
+    update_dict = {k: v for k, v in analysis_update.dict().items() if v is not None}
+    
+    result = await db.analyses.update_one(
+        {"id": analysis_id},
+        {"$set": update_dict}
     )
     if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Palpite não encontrado")
+        raise HTTPException(status_code=404, detail="Análise não encontrada")
     
-    updated_tip = await db.admin_tips.find_one({"id": tip_id})
-    return AdminTip(**updated_tip)
+    updated_analysis = await db.analyses.find_one({"id": analysis_id})
+    return Analysis(**updated_analysis)
 
-@api_router.delete("/admin/tips/{tip_id}")
-async def delete_admin_tip(tip_id: str, admin_user: User = Depends(get_admin_user)):
-    result = await db.admin_tips.delete_one({"id": tip_id})
+@api_router.delete("/admin/analysis/{analysis_id}")
+async def delete_analysis(analysis_id: str, admin_user: User = Depends(get_admin_user)):
+    result = await db.analyses.delete_one({"id": analysis_id})
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Palpite não encontrado")
-    return {"message": "Palpite deletado com sucesso"}
+        raise HTTPException(status_code=404, detail="Análise não encontrada")
+    return {"message": "Análise deletada com sucesso"}
 
 # Public routes (for approved users)
-@api_router.get("/tips", response_model=List[AdminTip])
-async def get_public_tips(current_user: User = Depends(get_current_user)):
-    tips = await db.admin_tips.find().sort("created_at", -1).limit(20).to_list(20)
-    return [AdminTip(**tip) for tip in tips]
-
-@api_router.get("/predictions", response_model=List[AIPrediction])
-async def get_ai_predictions(current_user: User = Depends(get_current_user)):
-    predictions = await db.ai_predictions.find().sort("created_at", -1).limit(10).to_list(10)
-    return [AIPrediction(**pred) for pred in predictions]
+@api_router.get("/analysis", response_model=List[Analysis])
+async def get_public_analyses(current_user: User = Depends(get_current_user)):
+    analyses = await db.analyses.find().sort("created_at", -1).limit(50).to_list(50)
+    return [Analysis(**analysis) for analysis in analyses]
 
 @api_router.get("/stats")
 async def get_statistics(current_user: User = Depends(get_current_user)):
-    # Admin tips stats
-    total_tips = await db.admin_tips.count_documents({})
-    won_tips = await db.admin_tips.count_documents({"status": PredictionStatus.WON})
-    lost_tips = await db.admin_tips.count_documents({"status": PredictionStatus.LOST})
+    # Analysis stats
+    total_analyses = await db.analyses.count_documents({})
+    won_analyses = await db.analyses.count_documents({"status": AnalysisStatus.WON})
+    lost_analyses = await db.analyses.count_documents({"status": AnalysisStatus.LOST})
     
-    admin_accuracy = (won_tips / (won_tips + lost_tips) * 100) if (won_tips + lost_tips) > 0 else 0
-    
-    # AI predictions stats
-    total_ai_predictions = await db.ai_predictions.count_documents({})
-    won_ai_predictions = await db.ai_predictions.count_documents({"status": PredictionStatus.WON})
-    lost_ai_predictions = await db.ai_predictions.count_documents({"status": PredictionStatus.LOST})
-    
-    ai_accuracy = (won_ai_predictions / (won_ai_predictions + lost_ai_predictions) * 100) if (won_ai_predictions + lost_ai_predictions) > 0 else 0
+    accuracy = (won_analyses / (won_analyses + lost_analyses) * 100) if (won_analyses + lost_analyses) > 0 else 0
     
     return {
-        "admin_tips": {
-            "total": total_tips,
-            "won": won_tips,
-            "lost": lost_tips,
-            "accuracy": round(admin_accuracy, 2)
-        },
-        "ai_predictions": {
-            "total": total_ai_predictions,
-            "won": won_ai_predictions,
-            "lost": lost_ai_predictions,
-            "accuracy": round(ai_accuracy, 2)
-        }
+        "total_analyses": total_analyses,
+        "won": won_analyses,
+        "lost": lost_analyses,
+        "pending": total_analyses - won_analyses - lost_analyses,
+        "accuracy": round(accuracy, 2)
     }
 
 # Include the router in the main app
