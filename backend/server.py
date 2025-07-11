@@ -240,6 +240,31 @@ async def login(user_data: UserLogin):
     
     return {"access_token": access_token, "token_type": "bearer", "user": user_data}
 
+@api_router.put("/auth/change-password")
+async def change_password(
+    password_data: dict,
+    current_user: User = Depends(get_current_user)
+):
+    current_password = password_data.get("currentPassword")
+    new_password = password_data.get("newPassword")
+    
+    if not current_password or not new_password:
+        raise HTTPException(status_code=400, detail="Senhas são obrigatórias")
+    
+    # Get user from database to verify current password
+    user_doc = await db.users.find_one({"id": current_user.id})
+    if not user_doc or not verify_password(current_password, user_doc["password_hash"]):
+        raise HTTPException(status_code=400, detail="Senha atual incorreta")
+    
+    # Update password
+    new_password_hash = hash_password(new_password)
+    await db.users.update_one(
+        {"id": current_user.id},
+        {"$set": {"password_hash": new_password_hash}}
+    )
+    
+    return {"message": "Senha alterada com sucesso"}
+
 @api_router.get("/auth/me", response_model=dict)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     return {
