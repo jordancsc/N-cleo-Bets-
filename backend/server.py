@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 import jwt
 import bcrypt
 from enum import Enum
+import asyncio
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -46,10 +47,19 @@ class AnalysisStatus(str, Enum):
     WON = "won"
     LOST = "lost"
 
-class MatchResult(str, Enum):
+class AnalysisResult(str, Enum):
+    GREEN = "green"
+    RED = "red"
+    PENDING = "pending"
+
+class BetType(str, Enum):
     HOME_WIN = "1"
     DRAW = "X"
     AWAY_WIN = "2"
+    OVER = "over"
+    UNDER = "under"
+    DOUBLE_CHANCE_1 = "1x"
+    DOUBLE_CHANCE_2 = "2x"
 
 # Models
 class User(BaseModel):
@@ -61,6 +71,7 @@ class User(BaseModel):
     is_active: bool = True
     created_at: datetime = Field(default_factory=datetime.utcnow)
     approved_by_admin: bool = False
+    expires_at: Optional[datetime] = None
 
 class UserCreate(BaseModel):
     username: str
@@ -87,19 +98,18 @@ class Analysis(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     title: str
     match_info: str
-    prediction: MatchResult
+    bet_type: BetType
     confidence: float
     detailed_analysis: str
     odds: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     match_date: datetime
-    result: Optional[MatchResult] = None
-    status: AnalysisStatus = AnalysisStatus.PENDING
+    result: AnalysisResult = AnalysisResult.PENDING
 
 class AnalysisCreate(BaseModel):
     title: str
     match_info: str
-    prediction: MatchResult
+    bet_type: BetType
     confidence: float
     detailed_analysis: str
     odds: Optional[str] = None
@@ -108,13 +118,12 @@ class AnalysisCreate(BaseModel):
 class AnalysisUpdate(BaseModel):
     title: Optional[str] = None
     match_info: Optional[str] = None
-    prediction: Optional[MatchResult] = None
+    bet_type: Optional[BetType] = None
     confidence: Optional[float] = None
     detailed_analysis: Optional[str] = None
     odds: Optional[str] = None
     match_date: Optional[datetime] = None
-    result: Optional[MatchResult] = None
-    status: Optional[AnalysisStatus] = None
+    result: Optional[AnalysisResult] = None
 
 # Utility functions
 def hash_password(password: str) -> str:
@@ -146,12 +155,36 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     if user is None:
         raise HTTPException(status_code=401, detail="Usuário não encontrado")
     
+    # Check if user expired (only for non-admin users)
+    if user.get("role") != UserRole.ADMIN and user.get("expires_at"):
+        if datetime.utcnow() > datetime.fromisoformat(user["expires_at"].replace('Z', '+00:00')):
+            # Delete expired user
+            await db.users.delete_one({"id": user_id})
+            raise HTTPException(status_code=401, detail="Conta expirada")
+    
     return User(**user)
 
 async def get_admin_user(current_user: User = Depends(get_current_user)):
     if current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Acesso negado. Apenas administradores.")
     return current_user
+
+# Background task to clean expired users
+async def cleanup_expired_users():
+    while True:
+        try:
+            current_time = datetime.utcnow()
+            result = await db.users.delete_many({
+                "role": {"$ne": UserRole.ADMIN},
+                "expires_at": {"$lt": current_time}
+            })
+            if result.deleted_count > 0:
+                logging.info(f"Cleaned up {result.deleted_count} expired users")
+        except Exception as e:
+            logging.error(f"Error cleaning expired users: {e}")
+        
+        # Wait 1 hour before next cleanup
+        await asyncio.sleep(3600)
 
 # Routes
 @api_router.get("/")
@@ -166,9 +199,10 @@ async def register(user_data: UserCreate):
     if existing_user:
         raise HTTPException(status_code=400, detail="Usuário ou email já existe")
     
-    # Create user
+    # Create user with 31-day expiration
     user_dict = user_data.dict()
     user_dict["password_hash"] = hash_password(user_data.password)
+    user_dict["expires_at"] = datetime.utcnow() + timedelta(days=31)
     del user_dict["password"]
     
     user = User(**user_dict)
@@ -184,6 +218,13 @@ async def login(user_data: UserLogin):
     
     if not user["is_active"] or not user["approved_by_admin"]:
         raise HTTPException(status_code=401, detail="Conta não aprovada pelo administrador")
+    
+    # Check if user expired (only for non-admin users)
+    if user.get("role") != UserRole.ADMIN and user.get("expires_at"):
+        if datetime.utcnow() > datetime.fromisoformat(user["expires_at"].replace('Z', '+00:00')):
+            # Delete expired user
+            await db.users.delete_one({"id": user["id"]})
+            raise HTTPException(status_code=401, detail="Conta expirada")
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
@@ -214,7 +255,8 @@ async def get_users(admin_user: User = Depends(get_admin_user)):
     users = await db.users.find().to_list(1000)
     return [{"id": u["id"], "username": u["username"], "email": u["email"], 
              "role": u["role"], "is_active": u["is_active"], 
-             "approved_by_admin": u["approved_by_admin"], "created_at": u["created_at"]} for u in users]
+             "approved_by_admin": u["approved_by_admin"], "created_at": u["created_at"],
+             "expires_at": u.get("expires_at")} for u in users]
 
 @api_router.post("/admin/create-user", response_model=dict)
 async def admin_create_user(user_data: AdminUserCreate, admin_user: User = Depends(get_admin_user)):
@@ -226,6 +268,9 @@ async def admin_create_user(user_data: AdminUserCreate, admin_user: User = Depen
     # Create user
     user_dict = user_data.dict()
     user_dict["password_hash"] = hash_password(user_data.password)
+    # Set expiration for non-admin users
+    if user_data.role != UserRole.ADMIN:
+        user_dict["expires_at"] = datetime.utcnow() + timedelta(days=31)
     del user_dict["password"]
     
     user = User(**user_dict)
@@ -307,16 +352,16 @@ async def get_public_analyses(current_user: User = Depends(get_current_user)):
 async def get_statistics(current_user: User = Depends(get_current_user)):
     # Analysis stats
     total_analyses = await db.analyses.count_documents({})
-    won_analyses = await db.analyses.count_documents({"status": AnalysisStatus.WON})
-    lost_analyses = await db.analyses.count_documents({"status": AnalysisStatus.LOST})
+    green_analyses = await db.analyses.count_documents({"result": AnalysisResult.GREEN})
+    red_analyses = await db.analyses.count_documents({"result": AnalysisResult.RED})
     
-    accuracy = (won_analyses / (won_analyses + lost_analyses) * 100) if (won_analyses + lost_analyses) > 0 else 0
+    accuracy = (green_analyses / (green_analyses + red_analyses) * 100) if (green_analyses + red_analyses) > 0 else 0
     
     return {
         "total_analyses": total_analyses,
-        "won": won_analyses,
-        "lost": lost_analyses,
-        "pending": total_analyses - won_analyses - lost_analyses,
+        "green": green_analyses,
+        "red": red_analyses,
+        "pending": total_analyses - green_analyses - red_analyses,
         "accuracy": round(accuracy, 2)
     }
 
@@ -354,6 +399,9 @@ async def startup_event():
         admin = User(**admin_data)
         await db.users.insert_one(admin.dict())
         logger.info("Admin user created: username=admin, password=admin123")
+    
+    # Start cleanup task
+    asyncio.create_task(cleanup_expired_users())
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

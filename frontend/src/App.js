@@ -98,7 +98,7 @@ const LoginForm = ({ onToggle }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 wolf-background">
+    <div className="min-h-screen flex items-center justify-center nucleobets-background">
       <div className="max-w-md w-full space-y-8 p-8 bg-slate-800/90 backdrop-blur-sm rounded-xl shadow-2xl border border-purple-500/30">
         <div className="text-center">
           <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
@@ -171,7 +171,7 @@ const RegisterForm = ({ onToggle }) => {
     
     const success = await register(username, email, password);
     if (success) {
-      setMessage('Conta criada com sucesso! Aguarde aprovação do administrador.');
+      setMessage('Conta criada com sucesso! Aguarde aprovação do administrador. Sua conta expira em 31 dias.');
       setUsername('');
       setEmail('');
       setPassword('');
@@ -181,7 +181,7 @@ const RegisterForm = ({ onToggle }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 wolf-background">
+    <div className="min-h-screen flex items-center justify-center nucleobets-background">
       <div className="max-w-md w-full space-y-8 p-8 bg-slate-800/90 backdrop-blur-sm rounded-xl shadow-2xl border border-purple-500/30">
         <div className="text-center">
           <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
@@ -308,6 +308,19 @@ const Navigation = ({ activeTab, setActiveTab }) => {
   );
 };
 
+const getBetTypeLabel = (betType) => {
+  const labels = {
+    '1': 'Casa',
+    'X': 'Empate',
+    '2': 'Fora',
+    'over': 'Over',
+    'under': 'Under',
+    '1x': 'Dupla Chance 1',
+    '2x': 'Dupla Chance 2'
+  };
+  return labels[betType] || betType;
+};
+
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('analyses');
   const [analyses, setAnalyses] = useState([]);
@@ -324,7 +337,7 @@ const Dashboard = () => {
   const [newAnalysis, setNewAnalysis] = useState({
     title: '',
     match_info: '',
-    prediction: '1',
+    bet_type: '1',
     confidence: 0,
     detailed_analysis: '',
     odds: '',
@@ -394,7 +407,7 @@ const Dashboard = () => {
       setNewAnalysis({
         title: '',
         match_info: '',
-        prediction: '1',
+        bet_type: '1',
         confidence: 0,
         detailed_analysis: '',
         odds: '',
@@ -460,8 +473,17 @@ const Dashboard = () => {
     }
   };
 
+  const getDaysLeft = (expiresAt) => {
+    if (!expiresAt) return 'Permanente';
+    const now = new Date();
+    const expires = new Date(expiresAt);
+    const diffTime = expires - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? `${diffDays} dias` : 'Expirado';
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 wolf-background">
+    <div className="min-h-screen nucleobets-background">
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -475,12 +497,12 @@ const Dashboard = () => {
                 <div className="text-slate-400">Total</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-green-400">{stats.won}</div>
-                <div className="text-slate-400">Acertos</div>
+                <div className="text-3xl font-bold text-green-400">{stats.green} ✅</div>
+                <div className="text-slate-400">Green</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-red-400">{stats.lost}</div>
-                <div className="text-slate-400">Erros</div>
+                <div className="text-3xl font-bold text-red-400">{stats.red} 🔴</div>
+                <div className="text-slate-400">Red</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-yellow-400">{stats.pending}</div>
@@ -511,7 +533,7 @@ const Dashboard = () => {
                     </div>
                     <div className="text-right ml-4">
                       <div className="text-lg font-bold text-purple-400">
-                        {analysis.prediction === '1' ? 'Casa' : analysis.prediction === 'X' ? 'Empate' : 'Fora'}
+                        {getBetTypeLabel(analysis.bet_type)}
                       </div>
                       <div className="text-sm text-slate-400">{analysis.confidence}% confiança</div>
                       {analysis.odds && (
@@ -525,11 +547,12 @@ const Dashboard = () => {
                     </div>
                     <div className="flex items-center space-x-3">
                       <div className={`px-3 py-1 rounded-full text-xs ${
-                        analysis.status === 'won' ? 'bg-green-500/20 text-green-400' :
-                        analysis.status === 'lost' ? 'bg-red-500/20 text-red-400' :
+                        analysis.result === 'green' ? 'bg-green-500/20 text-green-400' :
+                        analysis.result === 'red' ? 'bg-red-500/20 text-red-400' :
                         'bg-yellow-500/20 text-yellow-400'
                       }`}>
-                        {analysis.status === 'won' ? 'Ganhou' : analysis.status === 'lost' ? 'Perdeu' : 'Pendente'}
+                        {analysis.result === 'green' ? 'Green ✅' : 
+                         analysis.result === 'red' ? 'Red 🔴' : 'Pendente'}
                       </div>
                       {user?.role === 'admin' && (
                         <div className="flex space-x-2">
@@ -596,16 +619,20 @@ const Dashboard = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <select
-                    value={editingAnalysis ? editingAnalysis.prediction : newAnalysis.prediction}
+                    value={editingAnalysis ? editingAnalysis.bet_type : newAnalysis.bet_type}
                     onChange={(e) => editingAnalysis ? 
-                      setEditingAnalysis({...editingAnalysis, prediction: e.target.value}) :
-                      setNewAnalysis({...newAnalysis, prediction: e.target.value})
+                      setEditingAnalysis({...editingAnalysis, bet_type: e.target.value}) :
+                      setNewAnalysis({...newAnalysis, bet_type: e.target.value})
                     }
                     className="px-4 py-2 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                   >
                     <option value="1">Casa</option>
                     <option value="X">Empate</option>
                     <option value="2">Fora</option>
+                    <option value="over">Over</option>
+                    <option value="under">Under</option>
+                    <option value="1x">Dupla Chance 1</option>
+                    <option value="2x">Dupla Chance 2</option>
                   </select>
                   <input
                     type="number"
@@ -640,25 +667,15 @@ const Dashboard = () => {
                   />
                 </div>
                 {editingAnalysis && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                     <select
-                      value={editingAnalysis.result || ''}
+                      value={editingAnalysis.result}
                       onChange={(e) => setEditingAnalysis({...editingAnalysis, result: e.target.value})}
                       className="px-4 py-2 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                     >
-                      <option value="">Resultado (opcional)</option>
-                      <option value="1">Casa</option>
-                      <option value="X">Empate</option>
-                      <option value="2">Fora</option>
-                    </select>
-                    <select
-                      value={editingAnalysis.status}
-                      onChange={(e) => setEditingAnalysis({...editingAnalysis, status: e.target.value})}
-                      className="px-4 py-2 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    >
                       <option value="pending">Pendente</option>
-                      <option value="won">Ganhou</option>
-                      <option value="lost">Perdeu</option>
+                      <option value="green">Green ✅</option>
+                      <option value="red">Red 🔴</option>
                     </select>
                   </div>
                 )}
@@ -761,7 +778,9 @@ const Dashboard = () => {
                     <div>
                       <div className="text-white font-medium">{user.username}</div>
                       <div className="text-slate-400 text-sm">{user.email}</div>
-                      <div className="text-slate-500 text-xs">{user.role}</div>
+                      <div className="text-slate-500 text-xs">
+                        {user.role} • {getDaysLeft(user.expires_at)}
+                      </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <span className={`px-3 py-1 rounded-full text-xs ${
@@ -811,7 +830,7 @@ const App = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 wolf-background flex items-center justify-center">
+      <div className="min-h-screen nucleobets-background flex items-center justify-center">
         <div className="text-white text-xl">Carregando...</div>
       </div>
     );
