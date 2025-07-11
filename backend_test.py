@@ -459,6 +459,128 @@ class NucleoBetstester:
             self.log_result("Delete Admin Tip", False, f"Tip deletion request failed: {str(e)}")
             return False
     
+    def test_create_valuable_tip(self):
+        """Test creating valuable tips (PRIORITY TEST - user reported issue)"""
+        if not self.admin_token:
+            self.log_result("Create Valuable Tip", False, "No admin token available")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            response = self.session.post(f"{BASE_URL}/admin/valuable-tips", json=TEST_VALUABLE_TIP_DATA, headers=headers)
+            
+            if response.status_code == 200:
+                tip = response.json()
+                self.test_valuable_tip_id = tip.get("id")
+                title = tip.get("title")
+                total_odds = tip.get("total_odds")
+                self.log_result("Create Valuable Tip", True, f"Valuable tip created: {title} - Odds: {total_odds}")
+                return True
+            else:
+                error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
+                self.log_result("Create Valuable Tip", False, f"Valuable tip creation failed: {error_msg}")
+                return False
+        except Exception as e:
+            self.log_result("Create Valuable Tip", False, f"Valuable tip creation request failed: {str(e)}")
+            return False
+    
+    def test_get_admin_valuable_tips(self):
+        """Test retrieving admin valuable tips"""
+        if not self.admin_token:
+            self.log_result("Get Admin Valuable Tips", False, "No admin token available")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            response = self.session.get(f"{BASE_URL}/admin/valuable-tips", headers=headers)
+            
+            if response.status_code == 200:
+                tips = response.json()
+                if len(tips) > 0:
+                    tip = tips[0]
+                    self.log_result("Get Admin Valuable Tips", True, f"Retrieved {len(tips)} valuable tips. Latest: {tip.get('title')}")
+                    return True
+                else:
+                    self.log_result("Get Admin Valuable Tips", True, "No valuable tips found (empty list)")
+                    return True
+            else:
+                error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
+                self.log_result("Get Admin Valuable Tips", False, f"Failed to get valuable tips: {error_msg}")
+                return False
+        except Exception as e:
+            self.log_result("Get Admin Valuable Tips", False, f"Get valuable tips request failed: {str(e)}")
+            return False
+    
+    def test_get_public_valuable_tips(self):
+        """Test retrieving public valuable tips as regular user"""
+        if not self.user_token:
+            self.log_result("Get Public Valuable Tips", False, "No user token available")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.user_token}"}
+            response = self.session.get(f"{BASE_URL}/valuable-tips", headers=headers)
+            
+            if response.status_code == 200:
+                tips = response.json()
+                self.log_result("Get Public Valuable Tips", True, f"User can access {len(tips)} public valuable tips")
+                return True
+            else:
+                error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
+                self.log_result("Get Public Valuable Tips", False, f"Failed to get public valuable tips: {error_msg}")
+                return False
+        except Exception as e:
+            self.log_result("Get Public Valuable Tips", False, f"Get public valuable tips request failed: {str(e)}")
+            return False
+    
+    def test_update_valuable_tip(self):
+        """Test updating valuable tip"""
+        if not self.admin_token or not self.test_valuable_tip_id:
+            self.log_result("Update Valuable Tip", False, "Missing admin token or valuable tip ID")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            update_data = {
+                "stake_suggestion": "10-15% da banca (atualizado)"
+            }
+            response = self.session.put(f"{BASE_URL}/admin/valuable-tips/{self.test_valuable_tip_id}", json=update_data, headers=headers)
+            
+            if response.status_code == 200:
+                tip = response.json()
+                stake_suggestion = tip.get("stake_suggestion")
+                self.log_result("Update Valuable Tip", True, f"Valuable tip updated - Stake suggestion: {stake_suggestion}")
+                return True
+            else:
+                error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
+                self.log_result("Update Valuable Tip", False, f"Valuable tip update failed: {error_msg}")
+                return False
+        except Exception as e:
+            self.log_result("Update Valuable Tip", False, f"Valuable tip update request failed: {str(e)}")
+            return False
+    
+    def test_delete_valuable_tip(self):
+        """Test deleting valuable tip"""
+        if not self.admin_token or not self.test_valuable_tip_id:
+            self.log_result("Delete Valuable Tip", False, "Missing admin token or valuable tip ID")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            response = self.session.delete(f"{BASE_URL}/admin/valuable-tips/{self.test_valuable_tip_id}", headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.log_result("Delete Valuable Tip", True, "Valuable tip deleted successfully", data.get("message"))
+                return True
+            else:
+                error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
+                self.log_result("Delete Valuable Tip", False, f"Valuable tip deletion failed: {error_msg}")
+                return False
+        except Exception as e:
+            self.log_result("Delete Valuable Tip", False, f"Valuable tip deletion request failed: {str(e)}")
+            return False
+    
     def run_all_tests(self):
         """Run all backend tests in sequence"""
         print("🚀 Starting Núcleo Bets Backend API Tests")
