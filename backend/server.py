@@ -180,7 +180,10 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     
     # Check if user expired (only for non-admin users)
     if user.get("role") != UserRole.ADMIN and user.get("expires_at"):
-        if datetime.utcnow() > datetime.fromisoformat(user["expires_at"].replace('Z', '+00:00')):
+        expires_at = user["expires_at"]
+        if isinstance(expires_at, str):
+            expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+        if datetime.utcnow() > expires_at:
             # Delete expired user
             await db.users.delete_one({"id": user_id})
             raise HTTPException(status_code=401, detail="Conta expirada")
