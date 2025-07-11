@@ -330,31 +330,29 @@ class NucleoBetstester:
             return False
     
     def test_update_admin_tip(self):
-        """Test updating admin tip with result"""
+        """Test updating admin analysis with result"""
         if not self.admin_token or not self.test_tip_id:
-            self.log_result("Update Admin Tip", False, "Missing admin token or tip ID")
+            self.log_result("Update Admin Analysis", False, "Missing admin token or analysis ID")
             return False
             
         try:
             headers = {"Authorization": f"Bearer {self.admin_token}"}
             update_data = {
-                "result": "1",  # Home win
-                "status": "won"
+                "result": "green"  # Green result
             }
-            response = self.session.put(f"{BASE_URL}/admin/tips/{self.test_tip_id}", json=update_data, headers=headers)
+            response = self.session.put(f"{BASE_URL}/admin/analysis/{self.test_tip_id}", json=update_data, headers=headers)
             
             if response.status_code == 200:
                 tip = response.json()
                 result = tip.get("result")
-                status = tip.get("status")
-                self.log_result("Update Admin Tip", True, f"Tip updated - Result: {result}, Status: {status}")
+                self.log_result("Update Admin Analysis", True, f"Analysis updated - Result: {result}")
                 return True
             else:
                 error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
-                self.log_result("Update Admin Tip", False, f"Tip update failed: {error_msg}")
+                self.log_result("Update Admin Analysis", False, f"Analysis update failed: {error_msg}")
                 return False
         except Exception as e:
-            self.log_result("Update Admin Tip", False, f"Tip update request failed: {str(e)}")
+            self.log_result("Update Admin Analysis", False, f"Analysis update request failed: {str(e)}")
             return False
     
     def test_statistics_api(self):
