@@ -201,6 +201,46 @@ body::before {
   background-clip: text;
 }
 
+/* Date Filters */
+.date-filters {
+  background: rgba(15, 15, 35, 0.9);
+  border: 1px solid rgba(147, 51, 234, 0.3);
+  border-radius: 20px;
+  padding: 25px;
+  margin-bottom: 30px;
+  backdrop-filter: blur(10px);
+}
+
+.date-filters h3 {
+  color: #9333ea;
+  margin-bottom: 15px;
+  font-size: 1.3em;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filter-buttons button {
+  padding: 10px 20px;
+  border: 1px solid rgba(147, 51, 234, 0.3);
+  border-radius: 10px;
+  background: rgba(15, 15, 35, 0.8);
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: bold;
+}
+
+.filter-buttons button:hover,
+.filter-buttons button.active {
+  background: linear-gradient(45deg, #9333ea, #06b6d4);
+  border-color: #9333ea;
+  transform: translateY(-2px);
+}
+
 /* Form Styles */
 .create-analysis-form,
 .create-user-form {
@@ -393,6 +433,14 @@ body::before {
   text-align: right;
 }
 
+/* No analyses message */
+.no-analyses {
+  text-align: center;
+  padding: 50px;
+  color: #64748b;
+  font-size: 1.2em;
+}
+
 /* User Management */
 .users-list h3 {
   color: #9333ea;
@@ -503,6 +551,15 @@ body::before {
 
   .analysis-actions {
     align-self: flex-end;
+  }
+
+  .filter-buttons {
+    justify-content: center;
+  }
+
+  .filter-buttons button {
+    flex: 1;
+    min-width: 120px;
   }
 }
 

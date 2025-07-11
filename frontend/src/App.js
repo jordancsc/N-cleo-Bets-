@@ -8,6 +8,7 @@ function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [analyses, setAnalyses] = useState([]);
+  const [filteredAnalyses, setFilteredAnalyses] = useState([]);
   const [users, setUsers] = useState([]);
   const [newUser, setNewUser] = useState({ username: '', password: '', is_admin: false });
   const [newAnalysis, setNewAnalysis] = useState({
@@ -22,8 +23,24 @@ function App() {
   const [editingAnalysis, setEditingAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [currentView, setCurrentView] = useState('analyses');
+  const [dateFilter, setDateFilter] = useState('todas'); // todas, ontem, hoje, amanhã
 
-  const predictionTypes = ['Casa', 'Empate', 'Fora', 'Over', 'Under', 'Dupla Chance 1', 'Dupla Chance 2'];
+  const predictionTypes = [
+    'Casa', 
+    'Empate', 
+    'Fora', 
+    'Over 0.5', 
+    'Over 1.5', 
+    'Over 2.5', 
+    'Over 3.5', 
+    'Under 0.5', 
+    'Under 1.5', 
+    'Under 2.5', 
+    'Under 3.5',
+    'Dupla Chance 1X', 
+    'Dupla Chance 2X', 
+    'Dupla Chance 12'
+  ];
 
   useEffect(() => {
     if (token) {
@@ -31,6 +48,44 @@ function App() {
       fetchAnalyses();
     }
   }, [token]);
+
+  useEffect(() => {
+    filterAnalysesByDate();
+  }, [analyses, dateFilter]);
+
+  const filterAnalysesByDate = () => {
+    if (dateFilter === 'todas') {
+      setFilteredAnalyses(analyses);
+      return;
+    }
+
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const filtered = analyses.filter(analysis => {
+      const analysisDate = new Date(analysis.date);
+      const analysisDateOnly = new Date(analysisDate.getFullYear(), analysisDate.getMonth(), analysisDate.getDate());
+      
+      switch (dateFilter) {
+        case 'ontem':
+          const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+          return analysisDateOnly.getTime() === yesterdayOnly.getTime();
+        case 'hoje':
+          const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+          return analysisDateOnly.getTime() === todayOnly.getTime();
+        case 'amanhã':
+          const tomorrowOnly = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
+          return analysisDateOnly.getTime() === tomorrowOnly.getTime();
+        default:
+          return true;
+      }
+    });
+
+    setFilteredAnalyses(filtered);
+  };
 
   const fetchCurrentUser = async () => {
     try {
@@ -265,6 +320,39 @@ function App() {
     return new Date(dateString).toLocaleString('pt-BR');
   };
 
+  const getDateFilterStats = () => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const stats = {
+      ontem: 0,
+      hoje: 0,
+      amanhã: 0
+    };
+
+    analyses.forEach(analysis => {
+      const analysisDate = new Date(analysis.date);
+      const analysisDateOnly = new Date(analysisDate.getFullYear(), analysisDate.getMonth(), analysisDate.getDate());
+      
+      const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+      const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const tomorrowOnly = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
+
+      if (analysisDateOnly.getTime() === yesterdayOnly.getTime()) {
+        stats.ontem++;
+      } else if (analysisDateOnly.getTime() === todayOnly.getTime()) {
+        stats.hoje++;
+      } else if (analysisDateOnly.getTime() === tomorrowOnly.getTime()) {
+        stats.amanhã++;
+      }
+    });
+
+    return stats;
+  };
+
   if (!token) {
     return (
       <div className="login-container">
@@ -301,6 +389,8 @@ function App() {
     );
   }
 
+  const stats = getDateFilterStats();
+
   return (
     <div className="app">
       <header className="header">
@@ -333,6 +423,37 @@ function App() {
         {currentView === 'analyses' && (
           <div className="analyses-section">
             <h2>Análises de Apostas</h2>
+            
+            {/* Filtros de Data */}
+            <div className="date-filters">
+              <h3>Filtrar por Data</h3>
+              <div className="filter-buttons">
+                <button 
+                  className={dateFilter === 'todas' ? 'active' : ''}
+                  onClick={() => setDateFilter('todas')}
+                >
+                  Todas ({analyses.length})
+                </button>
+                <button 
+                  className={dateFilter === 'ontem' ? 'active' : ''}
+                  onClick={() => setDateFilter('ontem')}
+                >
+                  Ontem ({stats.ontem})
+                </button>
+                <button 
+                  className={dateFilter === 'hoje' ? 'active' : ''}
+                  onClick={() => setDateFilter('hoje')}
+                >
+                  Hoje ({stats.hoje})
+                </button>
+                <button 
+                  className={dateFilter === 'amanhã' ? 'active' : ''}
+                  onClick={() => setDateFilter('amanhã')}
+                >
+                  Amanhã ({stats.amanhã})
+                </button>
+              </div>
+            </div>
             
             {user?.is_admin && (
               <div className="create-analysis-form">
@@ -392,7 +513,7 @@ function App() {
             )}
 
             <div className="analyses-grid">
-              {analyses.map(analysis => (
+              {filteredAnalyses.map(analysis => (
                 <div key={analysis.id} className="analysis-card">
                   <div className="analysis-header">
                     <h3>{analysis.match}</h3>
@@ -442,6 +563,12 @@ function App() {
                 </div>
               ))}
             </div>
+
+            {filteredAnalyses.length === 0 && (
+              <div className="no-analyses">
+                <p>Nenhuma análise encontrada para {dateFilter === 'todas' ? 'este período' : dateFilter}.</p>
+              </div>
+            )}
           </div>
         )}
 
