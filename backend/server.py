@@ -94,6 +94,29 @@ class Token(BaseModel):
     token_type: str
     user: dict
 
+class ValuableTip(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    description: str
+    games: str
+    total_odds: str
+    stake_suggestion: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class ValuableTipCreate(BaseModel):
+    title: str
+    description: str
+    games: str
+    total_odds: str
+    stake_suggestion: str
+
+class ValuableTipUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    games: Optional[str] = None
+    total_odds: Optional[str] = None
+    stake_suggestion: Optional[str] = None
+
 class Analysis(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     title: str
