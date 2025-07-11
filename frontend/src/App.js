@@ -427,11 +427,15 @@ const getBetTypeLabel = (betType) => {
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('analyses');
   const [analyses, setAnalyses] = useState([]);
+  const [valuableTips, setValuableTips] = useState([]);
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [editingAnalysis, setEditingAnalysis] = useState(null);
+  const [editingValuableTip, setEditingValuableTip] = useState(null);
   const [showCreateUserForm, setShowCreateUserForm] = useState(false);
+  const [showCreateValuableTipForm, setShowCreateValuableTipForm] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [dateFilter, setDateFilter] = useState('all'); // 'yesterday', 'today', 'tomorrow', 'all'
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -452,15 +456,50 @@ const Dashboard = () => {
     odds: '',
     match_date: ''
   });
+  const [newValuableTip, setNewValuableTip] = useState({
+    title: '',
+    description: '',
+    games: '',
+    total_odds: '',
+    stake_suggestion: '',
+    created_at: new Date().toISOString().slice(0, 16)
+  });
   const { user } = useAuth();
 
   useEffect(() => {
     fetchStats();
     fetchAnalyses();
+    fetchValuableTips();
     if (user?.role === 'admin') {
       fetchUsers();
     }
   }, []);
+
+  const getFilteredAnalyses = () => {
+    if (dateFilter === 'all') return analyses;
+    
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    return analyses.filter(analysis => {
+      const matchDate = new Date(analysis.match_date);
+      const analysisDay = matchDate.toDateString();
+      
+      switch (dateFilter) {
+        case 'yesterday':
+          return analysisDay === yesterday.toDateString();
+        case 'today':
+          return analysisDay === today.toDateString();
+        case 'tomorrow':
+          return analysisDay === tomorrow.toDateString();
+        default:
+          return true;
+      }
+    });
+  };
 
   const quickUpdateResult = async (analysisId, result) => {
     try {
@@ -479,7 +518,6 @@ const Dashboard = () => {
       return;
     }
     try {
-      // Implementar endpoint de mudança de senha
       await axios.put(`${API}/auth/change-password`, {
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword
@@ -507,6 +545,15 @@ const Dashboard = () => {
       setAnalyses(response.data);
     } catch (error) {
       console.error('Error fetching analyses:', error);
+    }
+  };
+
+  const fetchValuableTips = async () => {
+    try {
+      const response = await axios.get(`${API}/valuable-tips`);
+      setValuableTips(response.data);
+    } catch (error) {
+      console.error('Error fetching valuable tips:', error);
     }
   };
 
@@ -559,6 +606,25 @@ const Dashboard = () => {
     }
   };
 
+  const handleCreateValuableTip = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/admin/valuable-tips`, newValuableTip);
+      setNewValuableTip({
+        title: '',
+        description: '',
+        games: '',
+        total_odds: '',
+        stake_suggestion: '',
+        created_at: new Date().toISOString().slice(0, 16)
+      });
+      setShowCreateValuableTipForm(false);
+      fetchValuableTips();
+    } catch (error) {
+      console.error('Error creating valuable tip:', error);
+    }
+  };
+
   const handleUpdateAnalysis = async (e) => {
     e.preventDefault();
     try {
@@ -571,6 +637,17 @@ const Dashboard = () => {
     }
   };
 
+  const handleUpdateValuableTip = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`${API}/admin/valuable-tips/${editingValuableTip.id}`, editingValuableTip);
+      setEditingValuableTip(null);
+      fetchValuableTips();
+    } catch (error) {
+      console.error('Error updating valuable tip:', error);
+    }
+  };
+
   const deleteAnalysis = async (analysisId) => {
     if (window.confirm('Tem certeza que deseja deletar esta análise?')) {
       try {
@@ -579,6 +656,17 @@ const Dashboard = () => {
         fetchStats();
       } catch (error) {
         console.error('Error deleting analysis:', error);
+      }
+    }
+  };
+
+  const deleteValuableTip = async (tipId) => {
+    if (window.confirm('Tem certeza que deseja deletar este palpite valioso?')) {
+      try {
+        await axios.delete(`${API}/admin/valuable-tips/${tipId}`);
+        fetchValuableTips();
+      } catch (error) {
+        console.error('Error deleting valuable tip:', error);
       }
     }
   };
@@ -628,6 +716,8 @@ const Dashboard = () => {
       setActiveTab('analyses'); // Reset to analyses but show password form
     }
   }, [activeTab]);
+
+  const filteredAnalyses = getFilteredAnalyses();
 
   return (
     <div className="min-h-screen nucleobets-background">
@@ -731,9 +821,111 @@ const Dashboard = () => {
         {/* Content Sections */}
         {activeTab === 'analyses' && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-white mb-6">Análises de Futebol</h2>
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-white">Análises de Futebol</h2>
+              
+              {/* Date Filter Buttons */}
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setDateFilter('yesterday')}
+                  className={`px-4 py-2 rounded-lg transition-all duration-200 ${
+                    dateFilter === 'yesterday'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  Ontem
+                </button>
+                <button
+                  onClick={() => setDateFilter('today')}
+                  className={`px-4 py-2 rounded-lg transition-all duration-200 ${
+                    dateFilter === 'today'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  Hoje
+                </button>
+                <button
+                  onClick={() => setDateFilter('tomorrow')}
+                  className={`px-4 py-2 rounded-lg transition-all duration-200 ${
+                    dateFilter === 'tomorrow'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  Amanhã
+                </button>
+                <button
+                  onClick={() => setDateFilter('all')}
+                  className={`px-4 py-2 rounded-lg transition-all duration-200 ${
+                    dateFilter === 'all'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  Todos
+                </button>
+              </div>
+            </div>
+
+            {/* Palpites Valiosos Section */}
+            {valuableTips.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold text-yellow-400">💎 Palpites Valiosos</h3>
+                <div className="grid gap-4">
+                  {valuableTips.map((tip) => (
+                    <div key={tip.id} className="bg-gradient-to-r from-yellow-600/20 to-orange-600/20 backdrop-blur-sm rounded-xl p-6 border border-yellow-500/40">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex-1">
+                          <h4 className="text-xl font-semibold text-yellow-300">{tip.title}</h4>
+                          <p className="text-slate-300 mt-2">{tip.description}</p>
+                          <div className="mt-4 space-y-2">
+                            <div className="bg-slate-800/50 p-3 rounded-lg">
+                              <h5 className="text-yellow-400 font-medium mb-2">Jogos:</h5>
+                              <p className="text-white whitespace-pre-wrap">{tip.games}</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="bg-slate-800/50 p-3 rounded-lg text-center">
+                                <div className="text-green-400 text-lg font-bold">{tip.total_odds}</div>
+                                <div className="text-slate-400 text-sm">Odds Total</div>
+                              </div>
+                              <div className="bg-slate-800/50 p-3 rounded-lg text-center">
+                                <div className="text-blue-400 text-lg font-bold">{tip.stake_suggestion}</div>
+                                <div className="text-slate-400 text-sm">Stake Sugerido</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        {user?.role === 'admin' && (
+                          <div className="flex space-x-2 ml-4">
+                            <button
+                              onClick={() => setEditingValuableTip(tip)}
+                              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => deleteValuableTip(tip.id)}
+                              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg transition-colors"
+                            >
+                              Deletar
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-sm text-slate-400">
+                        {new Date(tip.created_at).toLocaleString('pt-BR')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Regular Analyses */}
             <div className="grid gap-6">
-              {analyses.map((analysis) => (
+              {filteredAnalyses.map((analysis) => (
                 <div key={analysis.id} className="bg-slate-800/90 backdrop-blur-sm rounded-xl p-6 border border-purple-500/30">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex-1">
@@ -805,9 +997,17 @@ const Dashboard = () => {
                   </div>
                 </div>
               ))}
-              {analyses.length === 0 && (
+              {filteredAnalyses.length === 0 && (
                 <div className="bg-slate-800/90 backdrop-blur-sm rounded-xl p-8 border border-purple-500/30 text-center">
-                  <p className="text-slate-400">Nenhuma análise disponível no momento.</p>
+                  <p className="text-slate-400">
+                    {dateFilter === 'all' 
+                      ? 'Nenhuma análise disponível no momento.' 
+                      : `Nenhuma análise encontrada para ${
+                          dateFilter === 'yesterday' ? 'ontem' : 
+                          dateFilter === 'today' ? 'hoje' : 'amanhã'
+                        }.`
+                    }
+                  </p>
                 </div>
               )}
             </div>
