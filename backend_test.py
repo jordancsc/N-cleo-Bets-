@@ -308,25 +308,25 @@ class NucleoBetstester:
             return False
     
     def test_get_public_tips(self):
-        """Test retrieving public tips as regular user"""
+        """Test retrieving public analysis as regular user"""
         if not self.user_token:
-            self.log_result("Get Public Tips", False, "No user token available")
+            self.log_result("Get Public Analysis", False, "No user token available")
             return False
             
         try:
             headers = {"Authorization": f"Bearer {self.user_token}"}
-            response = self.session.get(f"{BASE_URL}/tips", headers=headers)
+            response = self.session.get(f"{BASE_URL}/analysis", headers=headers)
             
             if response.status_code == 200:
                 tips = response.json()
-                self.log_result("Get Public Tips", True, f"User can access {len(tips)} public tips")
+                self.log_result("Get Public Analysis", True, f"User can access {len(tips)} public analysis")
                 return True
             else:
                 error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
-                self.log_result("Get Public Tips", False, f"Failed to get public tips: {error_msg}")
+                self.log_result("Get Public Analysis", False, f"Failed to get public analysis: {error_msg}")
                 return False
         except Exception as e:
-            self.log_result("Get Public Tips", False, f"Get public tips request failed: {str(e)}")
+            self.log_result("Get Public Analysis", False, f"Get public analysis request failed: {str(e)}")
             return False
     
     def test_update_admin_tip(self):
