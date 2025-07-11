@@ -46,6 +46,7 @@ class NucleoBetstester:
         self.user_token = None
         self.test_user_id = None
         self.test_tip_id = None
+        self.test_valuable_tip_id = None
         self.results = []
         
     def log_result(self, test_name, success, message, details=None):
