@@ -609,7 +609,17 @@ const Dashboard = () => {
   const handleCreateValuableTip = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${API}/admin/valuable-tips`, newValuableTip);
+      const tipData = {
+        title: newValuableTip.title,
+        description: newValuableTip.description,
+        games: newValuableTip.games,
+        total_odds: newValuableTip.total_odds,
+        stake_suggestion: newValuableTip.stake_suggestion
+      };
+      
+      console.log('Enviando palpite valioso:', tipData);
+      await axios.post(`${API}/admin/valuable-tips`, tipData);
+      
       setNewValuableTip({
         title: '',
         description: '',
@@ -620,8 +630,10 @@ const Dashboard = () => {
       });
       setShowCreateValuableTipForm(false);
       fetchValuableTips();
+      alert('Palpite valioso criado com sucesso!');
     } catch (error) {
       console.error('Error creating valuable tip:', error);
+      alert('Erro ao criar palpite valioso: ' + (error.response?.data?.detail || error.message));
     }
   };
 
