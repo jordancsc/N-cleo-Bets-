@@ -281,30 +281,30 @@ class NucleoBetstester:
             return False
     
     def test_get_admin_tips(self):
-        """Test retrieving admin tips"""
+        """Test retrieving admin analysis"""
         if not self.admin_token:
-            self.log_result("Get Admin Tips", False, "No admin token available")
+            self.log_result("Get Admin Analysis", False, "No admin token available")
             return False
             
         try:
             headers = {"Authorization": f"Bearer {self.admin_token}"}
-            response = self.session.get(f"{BASE_URL}/admin/tips", headers=headers)
+            response = self.session.get(f"{BASE_URL}/admin/analysis", headers=headers)
             
             if response.status_code == 200:
                 tips = response.json()
                 if len(tips) > 0:
                     tip = tips[0]
-                    self.log_result("Get Admin Tips", True, f"Retrieved {len(tips)} tips. Latest: {tip.get('match_info')}")
+                    self.log_result("Get Admin Analysis", True, f"Retrieved {len(tips)} analysis. Latest: {tip.get('match_info')}")
                     return True
                 else:
-                    self.log_result("Get Admin Tips", True, "No tips found (empty list)")
+                    self.log_result("Get Admin Analysis", True, "No analysis found (empty list)")
                     return True
             else:
                 error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
-                self.log_result("Get Admin Tips", False, f"Failed to get tips: {error_msg}")
+                self.log_result("Get Admin Analysis", False, f"Failed to get analysis: {error_msg}")
                 return False
         except Exception as e:
-            self.log_result("Get Admin Tips", False, f"Get tips request failed: {str(e)}")
+            self.log_result("Get Admin Analysis", False, f"Get analysis request failed: {str(e)}")
             return False
     
     def test_get_public_tips(self):
