@@ -255,56 +255,148 @@ const RegisterForm = ({ onToggle }) => {
 
 const Navigation = ({ activeTab, setActiveTab }) => {
   const { user, logout } = useAuth();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <nav className="bg-slate-900/90 backdrop-blur-sm border-b border-purple-500/30">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center">
-            <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
-              Núcleo Bets
-            </h1>
-          </div>
-          
-          <div className="flex space-x-4">
-            <button
-              onClick={() => setActiveTab('analyses')}
-              className={`px-4 py-2 rounded-lg transition-all duration-200 ${
-                activeTab === 'analyses'
-                  ? 'bg-purple-600 text-white'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              Análises
-            </button>
-            {user?.role === 'admin' && (
+    <>
+      <nav className="bg-slate-900/90 backdrop-blur-sm border-b border-purple-500/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-4">
               <button
-                onClick={() => setActiveTab('admin')}
+                onClick={() => setIsMenuOpen(true)}
+                className="text-slate-300 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01"></path>
+                </svg>
+              </button>
+              <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
+                Núcleo Bets
+              </h1>
+            </div>
+            
+            <div className="flex space-x-4">
+              <button
+                onClick={() => setActiveTab('analyses')}
                 className={`px-4 py-2 rounded-lg transition-all duration-200 ${
-                  activeTab === 'admin'
+                  activeTab === 'analyses'
                     ? 'bg-purple-600 text-white'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800'
                 }`}
               >
-                Admin
+                Análises
               </button>
-            )}
-          </div>
+              {user?.role === 'admin' && (
+                <button
+                  onClick={() => setActiveTab('admin')}
+                  className={`px-4 py-2 rounded-lg transition-all duration-200 ${
+                    activeTab === 'admin'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  Admin
+                </button>
+              )}
+            </div>
 
-          <div className="flex items-center space-x-4">
-            <span className="text-slate-300">
-              {user?.username} ({user?.role})
-            </span>
-            <button
-              onClick={logout}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200"
-            >
-              Sair
-            </button>
+            <div className="flex items-center space-x-4">
+              <span className="text-slate-300">
+                {user?.username} ({user?.role})
+              </span>
+              <button
+                onClick={logout}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200"
+              >
+                Sair
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+
+      {/* Sidebar Menu */}
+      {isMenuOpen && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setIsMenuOpen(false)}></div>
+          <div className="absolute left-0 top-0 h-full w-80 bg-slate-800 shadow-xl transform transition-transform duration-300">
+            <div className="flex items-center justify-between p-6 border-b border-purple-500/30">
+              <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
+                Menu
+              </h2>
+              <button
+                onClick={() => setIsMenuOpen(false)}
+                className="text-slate-400 hover:text-white p-1"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              {/* Grupo Telegram */}
+              <a
+                href="https://t.me/nucleoBets"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center space-x-3 p-3 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
+              >
+                <svg className="w-6 h-6 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 0C5.374 0 0 5.374 0 12s5.374 12 12 12 12-5.374 12-12S18.626 0 12 0zm5.568 8.16c-.236 1.258-.957 4.466-1.35 5.93-.166.617-.492.82-.805.84-.687.062-1.208-.45-1.873-.88l-2.693-1.946c-1.188-.848-2.04-1.373-3.308-2.202-1.478-1.016-.52-1.574.323-2.486.22-.238 4.034-3.695 4.11-4.014.01-.04.018-.188-.07-.266-.088-.078-.218-.052-.311-.03-.133.03-2.242 1.424-6.334 4.187-.6.415-1.143.617-1.632.605-.537-.014-1.57-.303-2.338-.552-.942-.306-1.693-.468-1.629-.988.033-.27.402-.546 1.105-.825 4.327-1.886 7.215-3.128 8.666-3.726 4.137-1.743 4.998-2.048 5.558-2.058.123-.002.398.029.576.176.15.123.191.29.211.408.019.117.043.384.024.593z"/>
+                </svg>
+                <span className="text-white">Grupo Telegram</span>
+              </a>
+
+              {/* Instagram */}
+              <a
+                href="https://www.instagram.com/nucleo_bets?igsh=azdsbnRpN3BoaTZv"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center space-x-3 p-3 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
+              >
+                <svg className="w-6 h-6 text-pink-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                </svg>
+                <span className="text-white">Instagram</span>
+              </a>
+
+              {/* Trocar Senha */}
+              <button
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setActiveTab('change-password');
+                }}
+                className="flex items-center space-x-3 p-3 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors w-full text-left"
+              >
+                <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-3a1 1 0 011-1h2.586l4.707-4.707A6 6 0 0121 9z"></path>
+                </svg>
+                <span className="text-white">Trocar Senha</span>
+              </button>
+
+              {/* Painel Admin - Apenas para Admin */}
+              {user?.role === 'admin' && (
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setActiveTab('admin');
+                  }}
+                  className="flex items-center space-x-3 p-3 rounded-lg bg-purple-700 hover:bg-purple-600 transition-colors w-full text-left"
+                >
+                  <svg className="w-6 h-6 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  </svg>
+                  <span className="text-white">Painel Admin</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
