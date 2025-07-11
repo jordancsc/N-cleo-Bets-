@@ -596,6 +596,12 @@ class NucleoBetstester:
             self.test_admin_approve_user,
             self.test_user_login_after_approval,
             self.test_protected_route_access,
+            # PRIORITY TESTS - Valuable Tips (as requested in review)
+            self.test_create_valuable_tip,
+            self.test_get_admin_valuable_tips,
+            self.test_get_public_valuable_tips,
+            self.test_update_valuable_tip,
+            # Regular tip tests
             self.test_create_admin_tip,
             self.test_get_admin_tips,
             self.test_get_public_tips,
@@ -603,7 +609,8 @@ class NucleoBetstester:
             self.test_statistics_api,
             self.test_role_based_access_control,
             self.test_admin_deactivate_user,
-            self.test_delete_admin_tip
+            self.test_delete_admin_tip,
+            self.test_delete_valuable_tip
         ]
         
         for test in tests:
