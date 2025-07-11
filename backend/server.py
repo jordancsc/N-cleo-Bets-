@@ -109,8 +109,12 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     if user is None:
         raise HTTPException(status_code=401, detail="User not found")
     
-    # Check if user is expired
-    if datetime.utcnow() > user["expires_at"] and not user["is_admin"]:
+    # Check if user is active
+    if not user.get("is_active", True):
+        raise HTTPException(status_code=401, detail="User account inactive")
+    
+    # Check if user is expired (only for non-admin users)
+    if not user.get("is_admin", False) and datetime.utcnow() > user["expires_at"]:
         await db.users.update_one({"username": username}, {"$set": {"is_active": False}})
         raise HTTPException(status_code=401, detail="User account expired")
     
