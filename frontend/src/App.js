@@ -1018,6 +1018,96 @@ const Dashboard = () => {
           <div className="space-y-8">
             <h2 className="text-2xl font-bold text-white mb-6">Painel Admin</h2>
             
+            {/* Create/Edit Valuable Tip Form */}
+            <div className="bg-gradient-to-r from-yellow-600/20 to-orange-600/20 backdrop-blur-sm rounded-xl p-6 border border-yellow-500/40">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-yellow-400">💎 {editingValuableTip ? 'Editar' : 'Criar'} Palpite Valioso</h3>
+                <button
+                  onClick={() => setShowCreateValuableTipForm(!showCreateValuableTipForm)}
+                  className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors"
+                >
+                  {showCreateValuableTipForm || editingValuableTip ? 'Cancelar' : 'Novo Palpite Valioso'}
+                </button>
+              </div>
+
+              {(showCreateValuableTipForm || editingValuableTip) && (
+                <form onSubmit={editingValuableTip ? handleUpdateValuableTip : handleCreateValuableTip} className="space-y-4">
+                  <input
+                    type="text"
+                    placeholder="Título do palpite valioso"
+                    value={editingValuableTip ? editingValuableTip.title : newValuableTip.title}
+                    onChange={(e) => editingValuableTip ? 
+                      setEditingValuableTip({...editingValuableTip, title: e.target.value}) :
+                      setNewValuableTip({...newValuableTip, title: e.target.value})
+                    }
+                    className="w-full px-4 py-2 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    required
+                  />
+                  <textarea
+                    placeholder="Descrição do palpite"
+                    value={editingValuableTip ? editingValuableTip.description : newValuableTip.description}
+                    onChange={(e) => editingValuableTip ? 
+                      setEditingValuableTip({...editingValuableTip, description: e.target.value}) :
+                      setNewValuableTip({...newValuableTip, description: e.target.value})
+                    }
+                    className="w-full px-4 py-2 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 h-20 resize-none"
+                    required
+                  />
+                  <textarea
+                    placeholder="Lista de jogos (um por linha)&#10;Ex:&#10;Flamengo vs Palmeiras - Casa (1.80)&#10;Santos vs Corinthians - Over 2.5 (2.10)&#10;Real Madrid vs Barcelona - Fora (2.50)"
+                    value={editingValuableTip ? editingValuableTip.games : newValuableTip.games}
+                    onChange={(e) => editingValuableTip ? 
+                      setEditingValuableTip({...editingValuableTip, games: e.target.value}) :
+                      setNewValuableTip({...newValuableTip, games: e.target.value})
+                    }
+                    className="w-full px-4 py-2 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 h-32 resize-none"
+                    required
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input
+                      type="text"
+                      placeholder="Odds total (ex: 9.45)"
+                      value={editingValuableTip ? editingValuableTip.total_odds : newValuableTip.total_odds}
+                      onChange={(e) => editingValuableTip ? 
+                        setEditingValuableTip({...editingValuableTip, total_odds: e.target.value}) :
+                        setNewValuableTip({...newValuableTip, total_odds: e.target.value})
+                      }
+                      className="px-4 py-2 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      required
+                    />
+                    <input
+                      type="text"
+                      placeholder="Stake sugerido (ex: 5-10% da banca)"
+                      value={editingValuableTip ? editingValuableTip.stake_suggestion : newValuableTip.stake_suggestion}
+                      onChange={(e) => editingValuableTip ? 
+                        setEditingValuableTip({...editingValuableTip, stake_suggestion: e.target.value}) :
+                        setNewValuableTip({...newValuableTip, stake_suggestion: e.target.value})
+                      }
+                      className="px-4 py-2 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      required
+                    />
+                  </div>
+                  <div className="flex space-x-4">
+                    <button
+                      type="submit"
+                      className="flex-1 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white font-medium rounded-lg transition-all duration-200"
+                    >
+                      {editingValuableTip ? 'Atualizar Palpite Valioso' : 'Criar Palpite Valioso'}
+                    </button>
+                    {editingValuableTip && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingValuableTip(null)}
+                        className="px-6 py-3 bg-slate-600 hover:bg-slate-700 text-white font-medium rounded-lg transition-all duration-200"
+                      >
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
+                </form>
+              )}
+            </div>
+
             {/* Create/Edit Analysis Form */}
             <div className="bg-slate-800/90 backdrop-blur-sm rounded-xl p-6 border border-purple-500/30">
               <h3 className="text-xl font-semibold text-purple-400 mb-4">
