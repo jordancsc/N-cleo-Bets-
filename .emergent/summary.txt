@@ -1,0 +1,76 @@
+<analysis>
+The previous AI engineer initiated the development of Núcleo Bets, a football analysis website. Initially, the user requested an AI-powered prediction system with high assertiveness. However, the project pivoted significantly when the user decided to remove all AI components, transforming the application into a platform for manual football analyses managed by an administrator.
+
+The AI engineer successfully built the core application, including user authentication, an admin panel, and the ability for the admin to post detailed analyses. Iterative refinements were made based on user feedback, such as expanding prediction types, implementing a Green/Red result tracking system, adding automatic user expiration, and integrating social media links. The current state involves preparing the site for free, permanent deployment, and the AI engineer is actively debugging an issue with the Valuable Tips creation feature, focusing on the frontend interaction after confirming backend functionality.
+</analysis>
+
+<product_requirements>
+The product is Núcleo Bets, a web application for manual football analysis. The primary goal is for the administrator (the user) to post detailed football predictions and analyses for registered users to view.
+
+Key requirements and implemented features include:
+-   **User Role Management:** An admin-controlled system where the administrator approves/disapproves, activates/deactivates, and can delete users. Only approved users can access content. Admin accounts have absolute control and do not expire.
+-   **Analysis Management:** The admin can create, edit, and delete detailed football analyses. Each analysis includes prediction types (Casa/Empate/Fora, Over, Under, Dupla Chance 1, Dupla Chance 2), confidence levels, odds, detailed justification, and match information.
+-   **Prediction Tracking:** Admin can mark analyses as Green ✅ (correct) or Red 🔴 (incorrect). The site tracks and displays accuracy statistics based on these results.
+-   **Valuable Tips:** A dedicated section for the admin to post Valuable Tips, which are multi-game analyses with suggested total odds and stake. These are visually highlighted.
+-   **User Expiration:** A mechanism to automatically remove regular users after 31 days of access.
+-   **Navigation & Links:** A side menu accessible via a 3-dot icon, containing links to a Telegram group and Instagram profile, plus an option for users to change their password, and an admin-only link to the admin panel.
+-   **Analysis Filters:** Options to filter displayed analyses by date: Yesterday, Today, Tomorrow, and All.
+-   **Visual Design:** Dark blue and neon purple color scheme, modern, responsive UI with glassmorphism effects, and a custom background image.
+-   **Deployment:** Instructions and files for free, permanent deployment using MongoDB Atlas, Railway (backend), and Vercel (frontend).
+</product_requirements>
+
+<key_technical_concepts>
+-   **Full-stack Architecture:** React frontend, FastAPI backend, MongoDB database.
+-   **Authentication:** JWT-based user authentication with role-based access control (admin/user) and admin approval flow.
+-   **Styling:** Tailwind CSS for a modern, responsive, dark-themed UI with custom effects.
+-   **Deployment:** Strategy for free, permanent hosting using MongoDB Atlas, Railway, and Vercel.
+-   **Data Persistence:** MongoDB for storing user data, analyses, and valuable tips.
+</key_technical_concepts>
+
+<code_architecture>
+The application follows a standard full-stack architecture with distinct frontend and backend directories.
+
+
+
+-   **/app/backend/server.py**: This is the core of the FastAPI backend. It handles:
+    -   **User Authentication**: Endpoints for user registration, login, and token generation/validation.
+    -   **User Management (Admin)**: Endpoints for listing, approving/disapproving, deleting, and deactivating users.
+    -   **Analysis Management**: CRUD (Create, Read, Update, Delete) endpoints for regular football analyses, including marking results (Green/Red).
+    -   **Valuable Tips Management**: CRUD endpoints for Valuable Tips, allowing the admin to create and manage these highlighted predictions.
+    -   **Session Management**: Logic for user expiration after 31 days, with admin accounts being exempt.
+    -   **CORS Configuration**: Ensures the frontend can communicate with the backend.
+    -   **Database Interaction**: Connects to MongoDB using  from .
+    -   *Changes Made:* Initially set up with basic authentication and analysis. Later modified to remove AI logic, add extensive admin controls for users and analyses, implement Green/Red status, expand prediction types, and manage valuable tips.
+
+-   **/app/frontend/src/App.js**: The main React component rendering the user interface. It contains:
+    -   **Routing**: Manages different views (login, register, dashboard, admin panel).
+    -   **State Management**: Handles user authentication state, form data, and fetched analysis data.
+    -   **UI Components**: Renders the header, sidebar, analysis cards, admin forms for creating/editing analyses and users, and valuable tips section.
+    -   **API Calls**: Interacts with the FastAPI backend using  from .
+    -   *Changes Made:* Initial setup with basic UI and authentication forms. Extensively modified to implement the dark blue/neon purple theme, admin panel features (user management, analysis creation), dynamic display of analyses, Green/Red buttons, date filters, valuable tips section, and the interactive side menu with external links and password change functionality.
+
+-   **/app/frontend/src/App.css**: Contains the custom CSS and Tailwind CSS directives for the application's unique visual design.
+    -   *Changes Made:* Defines the dark background, neon purple and blue gradients, glassmorphism effects, and responsiveness. Updated to reflect new background images (wolf, then neon graphic).
+
+-   **/app/backend/requirements.txt & /app/frontend/package.json**: Define Python and Node.js dependencies for backend and frontend respectively. New libraries for authentication (e.g., , ) and UI components (e.g., related to form handling or routing in React) would have been added here.
+
+-   **/app/*.md files (DEPLOY_GUIDE.md, DEPLOY_INSTRUCTIONS.md, etc.)**: Newly created documentation files detailing the steps for free, permanent deployment of the application on MongoDB Atlas, Railway, and Vercel. These are crucial for the user to make the site live independently.
+
+The code is structured to allow for clear separation of concerns between frontend presentation, backend logic, and data persistence, following a common full-stack pattern.
+</code_architecture>
+
+<pending_tasks>
+-   **Fix Valuable Tips creation/display bug:** The admin panel's Valuable Tips creation feature is not functioning correctly, with analyses not appearing on the main screen despite backend tests passing.
+</pending_tasks>
+
+<current_work>
+Immediately before this summary request, the AI engineer was working on debugging the Valuable Tips creation feature. The user reported that while they can input data into the form in the admin panel and click create, the valuable tips do not appear on the main analyses screen as expected.
+
+The AI engineer's most recent action (Chat Message 122) was to test the backend endpoint for creating valuable tips (). The test results (Summary section) indicated that the backend endpoint is functioning correctly, returning a 200 OK status for a successful tip creation and providing the expected , , and . This suggests that the issue is likely on the frontend side, either in how the data is being sent from the admin form or how the valuable tips are being fetched and rendered on the main display page.
+
+The AI engineer's last explicit statement (Chat Message 123) confirms this: Perfeito! O backend está funcionando, mas vou verificar se o frontend está enviando os dados corretamente. Vou corrigir o possível problema no formulário. This indicates the focus is now on the  file (or related frontend components) to ensure the data submission logic or the display logic for valuable tips is correctly implemented.
+</current_work>
+
+<optional_next_step>
+Investigate and fix the frontend's form submission or display logic for the Valuable Tips section.
+</optional_next_step>
