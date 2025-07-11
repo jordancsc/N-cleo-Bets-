@@ -255,29 +255,29 @@ class NucleoBetstester:
             return False
     
     def test_create_admin_tip(self):
-        """Test creating admin tips"""
+        """Test creating admin analysis"""
         if not self.admin_token:
-            self.log_result("Create Admin Tip", False, "No admin token available")
+            self.log_result("Create Admin Analysis", False, "No admin token available")
             return False
             
         try:
             headers = {"Authorization": f"Bearer {self.admin_token}"}
-            response = self.session.post(f"{BASE_URL}/admin/tips", json=TEST_TIP_DATA, headers=headers)
+            response = self.session.post(f"{BASE_URL}/admin/analysis", json=TEST_TIP_DATA, headers=headers)
             
             if response.status_code == 200:
                 tip = response.json()
                 self.test_tip_id = tip.get("id")
                 match_info = tip.get("match_info")
-                prediction = tip.get("prediction")
+                bet_type = tip.get("bet_type")
                 confidence = tip.get("confidence")
-                self.log_result("Create Admin Tip", True, f"Tip created: {match_info} - Prediction: {prediction} ({confidence}%)")
+                self.log_result("Create Admin Analysis", True, f"Analysis created: {match_info} - Bet: {bet_type} ({confidence}%)")
                 return True
             else:
                 error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
-                self.log_result("Create Admin Tip", False, f"Tip creation failed: {error_msg}")
+                self.log_result("Create Admin Analysis", False, f"Analysis creation failed: {error_msg}")
                 return False
         except Exception as e:
-            self.log_result("Create Admin Tip", False, f"Tip creation request failed: {str(e)}")
+            self.log_result("Create Admin Analysis", False, f"Analysis creation request failed: {str(e)}")
             return False
     
     def test_get_admin_tips(self):
