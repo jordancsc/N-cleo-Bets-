@@ -30,6 +30,15 @@ TEST_TIP_DATA = {
     "match_date": (datetime.utcnow() + timedelta(days=1)).isoformat()
 }
 
+# Test data for Valuable Tips (as requested in review)
+TEST_VALUABLE_TIP_DATA = {
+    "title": "Tripla Especial - Copa do Brasil",
+    "description": "Combinação de 3 jogos com alta probabilidade de acerto",
+    "games": "Flamengo vs Palmeiras - Casa (1.80)\nSantos vs Corinthians - Over 2.5 (2.10)\nReal Madrid vs Barcelona - Fora (2.50)",
+    "total_odds": "9.45",
+    "stake_suggestion": "5-10% da banca"
+}
+
 class NucleoBetstester:
     def __init__(self):
         self.session = requests.Session()
