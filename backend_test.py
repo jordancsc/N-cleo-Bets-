@@ -22,10 +22,11 @@ TEST_USER_DATA = {
 }
 
 TEST_TIP_DATA = {
+    "title": "Análise Flamengo vs Palmeiras",
     "match_info": "Flamengo vs Palmeiras - Brasileirão",
-    "prediction": "1",  # Home win
+    "bet_type": "1",  # Home win
     "confidence": 85.5,
-    "reasoning": "Flamengo tem melhor desempenho em casa e Palmeiras tem 3 jogadores lesionados",
+    "detailed_analysis": "Flamengo tem melhor desempenho em casa e Palmeiras tem 3 jogadores lesionados",
     "odds": "2.10",
     "match_date": (datetime.utcnow() + timedelta(days=1)).isoformat()
 }
