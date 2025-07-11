@@ -1,0 +1,33 @@
+🔧 COMANDOS ÚTEIS - NÚCLEO BETS
+==============================
+
+🏃 INICIAR SISTEMA:
+sudo supervisorctl restart all
+
+🔍 VERIFICAR STATUS:
+sudo supervisorctl status
+
+📊 VER LOGS:
+tail -f /var/log/supervisor/backend.*.log
+tail -f /var/log/supervisor/frontend.*.log
+
+🛠️ INSTALAR DEPENDÊNCIAS:
+Frontend: cd /app/frontend && yarn install
+Backend: cd /app/backend && pip install -r requirements.txt
+
+🔄 REINICIAR SERVIÇOS:
+sudo supervisorctl restart frontend
+sudo supervisorctl restart backend
+
+🌐 TESTAR API:
+curl -X POST "http://localhost:8001/api/login"   -H "Content-Type: application/json"   -d '{"username": "Ademir", "password": "admin123"}'
+
+📱 PREVIEW:
+Use o botão "Preview" na interface do Emergent
+
+🚀 DEPLOY:
+1. Clique "Connect GitHub"
+2. Clique "Save to GitHub"
+3. Clique "Deploy"
+4. Clique "Deploy Now"
+
