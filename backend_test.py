@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 import time
 
 # Configuration
-BASE_URL = "https://2ccffa4c-2e74-43a8-9225-0242c358bf67.preview.emergentagent.com/api"
+BASE_URL = "https://18fbab74-59d2-4b31-b91b-8901ee593f59.preview.emergentagent.com/api"
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin123"
 
