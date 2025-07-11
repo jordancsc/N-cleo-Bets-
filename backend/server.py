@@ -391,6 +391,45 @@ async def delete_analysis(analysis_id: str, admin_user: User = Depends(get_admin
     return {"message": "Análise deletada com sucesso"}
 
 # Public routes (for approved users)
+# Valuable Tips routes
+@api_router.post("/admin/valuable-tips", response_model=ValuableTip)
+async def create_valuable_tip(tip_data: ValuableTipCreate, admin_user: User = Depends(get_admin_user)):
+    tip = ValuableTip(**tip_data.dict())
+    await db.valuable_tips.insert_one(tip.dict())
+    return tip
+
+@api_router.get("/admin/valuable-tips", response_model=List[ValuableTip])
+async def get_admin_valuable_tips(admin_user: User = Depends(get_admin_user)):
+    tips = await db.valuable_tips.find().sort("created_at", -1).to_list(1000)
+    return [ValuableTip(**tip) for tip in tips]
+
+@api_router.put("/admin/valuable-tips/{tip_id}", response_model=ValuableTip)
+async def update_valuable_tip(tip_id: str, tip_update: ValuableTipUpdate, admin_user: User = Depends(get_admin_user)):
+    update_dict = {k: v for k, v in tip_update.dict().items() if v is not None}
+    
+    result = await db.valuable_tips.update_one(
+        {"id": tip_id},
+        {"$set": update_dict}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Palpite valioso não encontrado")
+    
+    updated_tip = await db.valuable_tips.find_one({"id": tip_id})
+    return ValuableTip(**updated_tip)
+
+@api_router.delete("/admin/valuable-tips/{tip_id}")
+async def delete_valuable_tip(tip_id: str, admin_user: User = Depends(get_admin_user)):
+    result = await db.valuable_tips.delete_one({"id": tip_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Palpite valioso não encontrado")
+    return {"message": "Palpite valioso deletado com sucesso"}
+
+# Public routes (for approved users)
+@api_router.get("/valuable-tips", response_model=List[ValuableTip])
+async def get_public_valuable_tips(current_user: User = Depends(get_current_user)):
+    tips = await db.valuable_tips.find().sort("created_at", -1).limit(10).to_list(10)
+    return [ValuableTip(**tip) for tip in tips]
+
 @api_router.get("/analysis", response_model=List[Analysis])
 async def get_public_analyses(current_user: User = Depends(get_current_user)):
     analyses = await db.analyses.find().sort("created_at", -1).limit(50).to_list(50)
