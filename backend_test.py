@@ -436,25 +436,25 @@ class NucleoBetstester:
             return False
     
     def test_delete_admin_tip(self):
-        """Test deleting admin tip"""
+        """Test deleting admin analysis"""
         if not self.admin_token or not self.test_tip_id:
-            self.log_result("Delete Admin Tip", False, "Missing admin token or tip ID")
+            self.log_result("Delete Admin Analysis", False, "Missing admin token or analysis ID")
             return False
             
         try:
             headers = {"Authorization": f"Bearer {self.admin_token}"}
-            response = self.session.delete(f"{BASE_URL}/admin/tips/{self.test_tip_id}", headers=headers)
+            response = self.session.delete(f"{BASE_URL}/admin/analysis/{self.test_tip_id}", headers=headers)
             
             if response.status_code == 200:
                 data = response.json()
-                self.log_result("Delete Admin Tip", True, "Tip deleted successfully", data.get("message"))
+                self.log_result("Delete Admin Analysis", True, "Analysis deleted successfully", data.get("message"))
                 return True
             else:
                 error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
-                self.log_result("Delete Admin Tip", False, f"Tip deletion failed: {error_msg}")
+                self.log_result("Delete Admin Analysis", False, f"Analysis deletion failed: {error_msg}")
                 return False
         except Exception as e:
-            self.log_result("Delete Admin Tip", False, f"Tip deletion request failed: {str(e)}")
+            self.log_result("Delete Admin Analysis", False, f"Analysis deletion request failed: {str(e)}")
             return False
     
     def test_create_valuable_tip(self):
