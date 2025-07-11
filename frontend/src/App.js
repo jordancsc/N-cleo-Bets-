@@ -301,17 +301,8 @@ const Navigation = ({ activeTab, setActiveTab }) => {
               )}
             </div>
 
-            <div className="flex items-center space-x-4">
-              <span className="text-slate-300">
-                {user?.username} ({user?.role})
-              </span>
-              <button
-                onClick={logout}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200"
-              >
-                Sair
-              </button>
-            </div>
+            {/* Espaço vazio - removido usuário e sair */}
+            <div></div>
           </div>
         </div>
       </nav>
@@ -336,6 +327,12 @@ const Navigation = ({ activeTab, setActiveTab }) => {
             </div>
             
             <div className="p-6 space-y-4">
+              {/* Informações do Usuário */}
+              <div className="p-3 rounded-lg bg-slate-700/50 border border-purple-500/20">
+                <div className="text-white font-medium">{user?.username}</div>
+                <div className="text-slate-400 text-sm">({user?.role})</div>
+              </div>
+
               {/* Grupo Telegram */}
               <a
                 href="https://t.me/nucleoBets"
@@ -392,6 +389,20 @@ const Navigation = ({ activeTab, setActiveTab }) => {
                   <span className="text-white">Painel Admin</span>
                 </button>
               )}
+
+              {/* Sair */}
+              <button
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  logout();
+                }}
+                className="flex items-center space-x-3 p-3 rounded-lg bg-red-700 hover:bg-red-600 transition-colors w-full text-left"
+              >
+                <svg className="w-6 h-6 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+                <span className="text-white">Sair</span>
+              </button>
             </div>
           </div>
         </div>
