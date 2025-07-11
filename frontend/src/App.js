@@ -98,8 +98,8 @@ const LoginForm = ({ onToggle }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <div className="max-w-md w-full space-y-8 p-8 bg-slate-800 rounded-xl shadow-2xl border border-purple-500/30">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 wolf-background">
+      <div className="max-w-md w-full space-y-8 p-8 bg-slate-800/90 backdrop-blur-sm rounded-xl shadow-2xl border border-purple-500/30">
         <div className="text-center">
           <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
             Núcleo Bets
@@ -115,7 +115,7 @@ const LoginForm = ({ onToggle }) => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Usuário"
-                className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 required
               />
             </div>
@@ -125,7 +125,7 @@ const LoginForm = ({ onToggle }) => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Senha"
-                className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 required
               />
             </div>
@@ -181,8 +181,8 @@ const RegisterForm = ({ onToggle }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <div className="max-w-md w-full space-y-8 p-8 bg-slate-800 rounded-xl shadow-2xl border border-purple-500/30">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 wolf-background">
+      <div className="max-w-md w-full space-y-8 p-8 bg-slate-800/90 backdrop-blur-sm rounded-xl shadow-2xl border border-purple-500/30">
         <div className="text-center">
           <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
             Núcleo Bets
@@ -198,7 +198,7 @@ const RegisterForm = ({ onToggle }) => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Usuário"
-                className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 required
               />
             </div>
@@ -208,7 +208,7 @@ const RegisterForm = ({ onToggle }) => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email"
-                className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 required
               />
             </div>
@@ -218,7 +218,7 @@ const RegisterForm = ({ onToggle }) => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Senha"
-                className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 required
               />
             </div>
@@ -257,7 +257,7 @@ const Navigation = ({ activeTab, setActiveTab }) => {
   const { user, logout } = useAuth();
 
   return (
-    <nav className="bg-slate-900 border-b border-purple-500/30">
+    <nav className="bg-slate-900/90 backdrop-blur-sm border-b border-purple-500/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
@@ -314,6 +314,13 @@ const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [editingAnalysis, setEditingAnalysis] = useState(null);
+  const [showCreateUserForm, setShowCreateUserForm] = useState(false);
+  const [newUser, setNewUser] = useState({
+    username: '',
+    email: '',
+    password: '',
+    role: 'user'
+  });
   const [newAnalysis, setNewAnalysis] = useState({
     title: '',
     match_info: '',
@@ -357,6 +364,26 @@ const Dashboard = () => {
       setUsers(response.data);
     } catch (error) {
       console.error('Error fetching users:', error);
+    }
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/admin/create-user`, {
+        ...newUser,
+        approved_by_admin: true
+      });
+      setNewUser({
+        username: '',
+        email: '',
+        password: '',
+        role: 'user'
+      });
+      setShowCreateUserForm(false);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error creating user:', error);
     }
   };
 
@@ -434,13 +461,13 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 wolf-background">
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Section */}
         {stats && (
-          <div className="bg-slate-800 rounded-xl p-6 border border-purple-500/30 mb-8">
+          <div className="bg-slate-800/90 backdrop-blur-sm rounded-xl p-6 border border-purple-500/30 mb-8">
             <h3 className="text-xl font-semibold text-purple-400 mb-4">Estatísticas das Análises</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
@@ -473,7 +500,7 @@ const Dashboard = () => {
             <h2 className="text-2xl font-bold text-white mb-6">Análises de Futebol</h2>
             <div className="grid gap-6">
               {analyses.map((analysis) => (
-                <div key={analysis.id} className="bg-slate-800 rounded-xl p-6 border border-purple-500/30">
+                <div key={analysis.id} className="bg-slate-800/90 backdrop-blur-sm rounded-xl p-6 border border-purple-500/30">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex-1">
                       <h3 className="text-xl font-semibold text-white">{analysis.title}</h3>
@@ -525,7 +552,7 @@ const Dashboard = () => {
                 </div>
               ))}
               {analyses.length === 0 && (
-                <div className="bg-slate-800 rounded-xl p-8 border border-purple-500/30 text-center">
+                <div className="bg-slate-800/90 backdrop-blur-sm rounded-xl p-8 border border-purple-500/30 text-center">
                   <p className="text-slate-400">Nenhuma análise disponível no momento.</p>
                 </div>
               )}
@@ -538,7 +565,7 @@ const Dashboard = () => {
             <h2 className="text-2xl font-bold text-white mb-6">Painel Admin</h2>
             
             {/* Create/Edit Analysis Form */}
-            <div className="bg-slate-800 rounded-xl p-6 border border-purple-500/30">
+            <div className="bg-slate-800/90 backdrop-blur-sm rounded-xl p-6 border border-purple-500/30">
               <h3 className="text-xl font-semibold text-purple-400 mb-4">
                 {editingAnalysis ? 'Editar Análise' : 'Criar Nova Análise'}
               </h3>
@@ -552,7 +579,7 @@ const Dashboard = () => {
                       setEditingAnalysis({...editingAnalysis, title: e.target.value}) :
                       setNewAnalysis({...newAnalysis, title: e.target.value})
                     }
-                    className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="px-4 py-2 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                     required
                   />
                   <input
@@ -563,7 +590,7 @@ const Dashboard = () => {
                       setEditingAnalysis({...editingAnalysis, match_info: e.target.value}) :
                       setNewAnalysis({...newAnalysis, match_info: e.target.value})
                     }
-                    className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="px-4 py-2 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                     required
                   />
                 </div>
@@ -574,7 +601,7 @@ const Dashboard = () => {
                       setEditingAnalysis({...editingAnalysis, prediction: e.target.value}) :
                       setNewAnalysis({...newAnalysis, prediction: e.target.value})
                     }
-                    className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="px-4 py-2 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                   >
                     <option value="1">Casa</option>
                     <option value="X">Empate</option>
@@ -588,7 +615,7 @@ const Dashboard = () => {
                       setEditingAnalysis({...editingAnalysis, confidence: parseFloat(e.target.value)}) :
                       setNewAnalysis({...newAnalysis, confidence: parseFloat(e.target.value)})
                     }
-                    className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="px-4 py-2 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                     required
                   />
                   <input
@@ -599,7 +626,7 @@ const Dashboard = () => {
                       setEditingAnalysis({...editingAnalysis, odds: e.target.value}) :
                       setNewAnalysis({...newAnalysis, odds: e.target.value})
                     }
-                    className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="px-4 py-2 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                   <input
                     type="datetime-local"
@@ -608,7 +635,7 @@ const Dashboard = () => {
                       setEditingAnalysis({...editingAnalysis, match_date: e.target.value}) :
                       setNewAnalysis({...newAnalysis, match_date: e.target.value})
                     }
-                    className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="px-4 py-2 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                     required
                   />
                 </div>
@@ -617,7 +644,7 @@ const Dashboard = () => {
                     <select
                       value={editingAnalysis.result || ''}
                       onChange={(e) => setEditingAnalysis({...editingAnalysis, result: e.target.value})}
-                      className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="px-4 py-2 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                     >
                       <option value="">Resultado (opcional)</option>
                       <option value="1">Casa</option>
@@ -627,7 +654,7 @@ const Dashboard = () => {
                     <select
                       value={editingAnalysis.status}
                       onChange={(e) => setEditingAnalysis({...editingAnalysis, status: e.target.value})}
-                      className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="px-4 py-2 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                     >
                       <option value="pending">Pendente</option>
                       <option value="won">Ganhou</option>
@@ -642,7 +669,7 @@ const Dashboard = () => {
                     setEditingAnalysis({...editingAnalysis, detailed_analysis: e.target.value}) :
                     setNewAnalysis({...newAnalysis, detailed_analysis: e.target.value})
                   }
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 resize-none"
+                  className="w-full px-4 py-2 bg-slate-700/80 backdrop-blur-sm border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 resize-none"
                   required
                 />
                 <div className="flex space-x-4">
@@ -666,14 +693,75 @@ const Dashboard = () => {
             </div>
 
             {/* User Management */}
-            <div className="bg-slate-800 rounded-xl p-6 border border-purple-500/30">
-              <h3 className="text-xl font-semibold text-purple-400 mb-4">Gerenciar Usuários</h3>
+            <div className="bg-slate-800/90 backdrop-blur-sm rounded-xl p-6 border border-purple-500/30">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-purple-400">Gerenciar Usuários</h3>
+                <button
+                  onClick={() => setShowCreateUserForm(!showCreateUserForm)}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                >
+                  {showCreateUserForm ? 'Cancelar' : 'Adicionar Usuário'}
+                </button>
+              </div>
+
+              {/* Create User Form */}
+              {showCreateUserForm && (
+                <div className="mb-6 p-4 bg-slate-700/50 rounded-lg border border-purple-500/20">
+                  <h4 className="text-lg font-semibold text-purple-300 mb-4">Criar Novo Usuário</h4>
+                  <form onSubmit={handleCreateUser} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <input
+                        type="text"
+                        placeholder="Nome de usuário"
+                        value={newUser.username}
+                        onChange={(e) => setNewUser({...newUser, username: e.target.value})}
+                        className="px-4 py-2 bg-slate-600/80 backdrop-blur-sm border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        required
+                      />
+                      <input
+                        type="email"
+                        placeholder="Email"
+                        value={newUser.email}
+                        onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                        className="px-4 py-2 bg-slate-600/80 backdrop-blur-sm border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <input
+                        type="password"
+                        placeholder="Senha"
+                        value={newUser.password}
+                        onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                        className="px-4 py-2 bg-slate-600/80 backdrop-blur-sm border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        required
+                      />
+                      <select
+                        value={newUser.role}
+                        onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                        className="px-4 py-2 bg-slate-600/80 backdrop-blur-sm border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="user">Usuário</option>
+                        <option value="admin">Administrador</option>
+                      </select>
+                    </div>
+                    <button
+                      type="submit"
+                      className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-medium rounded-lg transition-all duration-200"
+                    >
+                      Criar Usuário
+                    </button>
+                  </form>
+                </div>
+              )}
+
               <div className="space-y-4">
                 {users.map((user) => (
-                  <div key={user.id} className="flex justify-between items-center p-4 bg-slate-700 rounded-lg">
+                  <div key={user.id} className="flex justify-between items-center p-4 bg-slate-700/50 rounded-lg">
                     <div>
                       <div className="text-white font-medium">{user.username}</div>
                       <div className="text-slate-400 text-sm">{user.email}</div>
+                      <div className="text-slate-500 text-xs">{user.role}</div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <span className={`px-3 py-1 rounded-full text-xs ${
@@ -723,7 +811,7 @@ const App = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 wolf-background flex items-center justify-center">
         <div className="text-white text-xl">Carregando...</div>
       </div>
     );

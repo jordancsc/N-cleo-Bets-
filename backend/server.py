@@ -67,6 +67,13 @@ class UserCreate(BaseModel):
     email: str
     password: str
 
+class AdminUserCreate(BaseModel):
+    username: str
+    email: str
+    password: str
+    role: UserRole = UserRole.USER
+    approved_by_admin: bool = True
+
 class UserLogin(BaseModel):
     username: str
     password: str
@@ -208,6 +215,23 @@ async def get_users(admin_user: User = Depends(get_admin_user)):
     return [{"id": u["id"], "username": u["username"], "email": u["email"], 
              "role": u["role"], "is_active": u["is_active"], 
              "approved_by_admin": u["approved_by_admin"], "created_at": u["created_at"]} for u in users]
+
+@api_router.post("/admin/create-user", response_model=dict)
+async def admin_create_user(user_data: AdminUserCreate, admin_user: User = Depends(get_admin_user)):
+    # Check if user already exists
+    existing_user = await db.users.find_one({"$or": [{"username": user_data.username}, {"email": user_data.email}]})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Usuário ou email já existe")
+    
+    # Create user
+    user_dict = user_data.dict()
+    user_dict["password_hash"] = hash_password(user_data.password)
+    del user_dict["password"]
+    
+    user = User(**user_dict)
+    await db.users.insert_one(user.dict())
+    
+    return {"message": "Usuário criado com sucesso pelo administrador."}
 
 @api_router.post("/admin/approve-user/{user_id}")
 async def approve_user(user_id: str, admin_user: User = Depends(get_admin_user)):
