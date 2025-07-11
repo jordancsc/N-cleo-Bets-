@@ -420,6 +420,12 @@ const Dashboard = () => {
   const [users, setUsers] = useState([]);
   const [editingAnalysis, setEditingAnalysis] = useState(null);
   const [showCreateUserForm, setShowCreateUserForm] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
   const [newUser, setNewUser] = useState({
     username: '',
     email: '',
@@ -444,6 +450,36 @@ const Dashboard = () => {
       fetchUsers();
     }
   }, []);
+
+  const quickUpdateResult = async (analysisId, result) => {
+    try {
+      await axios.put(`${API}/admin/analysis/${analysisId}`, { result });
+      fetchAnalyses();
+      fetchStats();
+    } catch (error) {
+      console.error('Error updating analysis result:', error);
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      alert('As senhas não coincidem!');
+      return;
+    }
+    try {
+      // Implementar endpoint de mudança de senha
+      await axios.put(`${API}/auth/change-password`, {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
+      alert('Senha alterada com sucesso!');
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setShowChangePassword(false);
+    } catch (error) {
+      alert('Erro ao alterar senha. Verifique a senha atual.');
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -574,11 +610,84 @@ const Dashboard = () => {
     return diffDays > 0 ? `${diffDays} dias` : 'Expirado';
   };
 
+  // Handle active tab from navigation menu
+  useEffect(() => {
+    if (activeTab === 'change-password') {
+      setShowChangePassword(true);
+      setActiveTab('analyses'); // Reset to analyses but show password form
+    }
+  }, [activeTab]);
+
   return (
     <div className="min-h-screen nucleobets-background">
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Change Password Modal */}
+        {showChangePassword && (
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+              <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setShowChangePassword(false)}></div>
+              <div className="inline-block align-bottom bg-slate-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div className="bg-slate-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-medium text-white">Trocar Senha</h3>
+                    <button
+                      onClick={() => setShowChangePassword(false)}
+                      className="text-slate-400 hover:text-white"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
+                  </div>
+                  <form onSubmit={handleChangePassword} className="space-y-4">
+                    <input
+                      type="password"
+                      placeholder="Senha atual"
+                      value={passwordData.currentPassword}
+                      onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                      className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      required
+                    />
+                    <input
+                      type="password"
+                      placeholder="Nova senha"
+                      value={passwordData.newPassword}
+                      onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                      className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      required
+                    />
+                    <input
+                      type="password"
+                      placeholder="Confirmar nova senha"
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                      className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      required
+                    />
+                    <div className="flex space-x-4">
+                      <button
+                        type="submit"
+                        className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                      >
+                        Alterar Senha
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowChangePassword(false)}
+                        className="flex-1 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Stats Section */}
         {stats && (
           <div className="bg-slate-800/90 backdrop-blur-sm rounded-xl p-6 border border-purple-500/30 mb-8">
@@ -646,6 +755,25 @@ const Dashboard = () => {
                         {analysis.result === 'green' ? 'Green ✅' : 
                          analysis.result === 'red' ? 'Red 🔴' : 'Pendente'}
                       </div>
+                      
+                      {/* Quick Result Buttons - Only for Admin */}
+                      {user?.role === 'admin' && analysis.result === 'pending' && (
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => quickUpdateResult(analysis.id, 'green')}
+                            className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded transition-colors"
+                          >
+                            ✅
+                          </button>
+                          <button
+                            onClick={() => quickUpdateResult(analysis.id, 'red')}
+                            className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors"
+                          >
+                            🔴
+                          </button>
+                        </div>
+                      )}
+
                       {user?.role === 'admin' && (
                         <div className="flex space-x-2">
                           <button
