@@ -1,0 +1,505 @@
+#!/usr/bin/env python3
+"""
+Backend API Testing for Núcleo Bets
+Tests all authentication, admin, and tips functionality
+"""
+
+import requests
+import json
+from datetime import datetime, timedelta
+import time
+
+# Configuration
+BASE_URL = "https://2ccffa4c-2e74-43a8-9225-0242c358bf67.preview.emergentagent.com/api"
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "admin123"
+
+# Test data
+TEST_USER_DATA = {
+    "username": "joao_silva",
+    "email": "joao.silva@email.com", 
+    "password": "senha123"
+}
+
+TEST_TIP_DATA = {
+    "match_info": "Flamengo vs Palmeiras - Brasileirão",
+    "prediction": "1",  # Home win
+    "confidence": 85.5,
+    "reasoning": "Flamengo tem melhor desempenho em casa e Palmeiras tem 3 jogadores lesionados",
+    "odds": "2.10",
+    "match_date": (datetime.utcnow() + timedelta(days=1)).isoformat()
+}
+
+class NucleoBetstester:
+    def __init__(self):
+        self.session = requests.Session()
+        self.admin_token = None
+        self.user_token = None
+        self.test_user_id = None
+        self.test_tip_id = None
+        self.results = []
+        
+    def log_result(self, test_name, success, message, details=None):
+        """Log test results"""
+        status = "✅ PASS" if success else "❌ FAIL"
+        print(f"{status} {test_name}: {message}")
+        if details:
+            print(f"   Details: {details}")
+        
+        self.results.append({
+            "test": test_name,
+            "success": success,
+            "message": message,
+            "details": details
+        })
+    
+    def test_api_health(self):
+        """Test if API is accessible"""
+        try:
+            response = self.session.get(f"{BASE_URL}/")
+            if response.status_code == 200:
+                data = response.json()
+                self.log_result("API Health Check", True, "API is accessible", data.get("message"))
+                return True
+            else:
+                self.log_result("API Health Check", False, f"API returned status {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_result("API Health Check", False, f"Failed to connect to API: {str(e)}")
+            return False
+    
+    def test_user_registration(self):
+        """Test user registration endpoint"""
+        try:
+            response = self.session.post(f"{BASE_URL}/auth/register", json=TEST_USER_DATA)
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.log_result("User Registration", True, "User registered successfully", data.get("message"))
+                return True
+            else:
+                error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
+                self.log_result("User Registration", False, f"Registration failed: {error_msg}")
+                return False
+        except Exception as e:
+            self.log_result("User Registration", False, f"Registration request failed: {str(e)}")
+            return False
+    
+    def test_user_login_before_approval(self):
+        """Test that user cannot login before admin approval"""
+        try:
+            login_data = {
+                "username": TEST_USER_DATA["username"],
+                "password": TEST_USER_DATA["password"]
+            }
+            response = self.session.post(f"{BASE_URL}/auth/login", json=login_data)
+            
+            if response.status_code == 401:
+                error_msg = response.json().get("detail", "")
+                if "não aprovada" in error_msg or "not approved" in error_msg.lower():
+                    self.log_result("User Login Before Approval", True, "Correctly blocked unapproved user", error_msg)
+                    return True
+                else:
+                    self.log_result("User Login Before Approval", False, f"Wrong error message: {error_msg}")
+                    return False
+            else:
+                self.log_result("User Login Before Approval", False, f"Should have been blocked but got status {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_result("User Login Before Approval", False, f"Login test failed: {str(e)}")
+            return False
+    
+    def test_admin_login(self):
+        """Test admin login"""
+        try:
+            login_data = {
+                "username": ADMIN_USERNAME,
+                "password": ADMIN_PASSWORD
+            }
+            response = self.session.post(f"{BASE_URL}/auth/login", json=login_data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.admin_token = data.get("access_token")
+                user_info = data.get("user", {})
+                
+                if user_info.get("role") == "admin":
+                    self.log_result("Admin Login", True, f"Admin logged in successfully as {user_info.get('username')}")
+                    return True
+                else:
+                    self.log_result("Admin Login", False, f"User role is {user_info.get('role')}, expected admin")
+                    return False
+            else:
+                error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
+                self.log_result("Admin Login", False, f"Admin login failed: {error_msg}")
+                return False
+        except Exception as e:
+            self.log_result("Admin Login", False, f"Admin login request failed: {str(e)}")
+            return False
+    
+    def test_admin_get_users(self):
+        """Test admin can get user list"""
+        if not self.admin_token:
+            self.log_result("Admin Get Users", False, "No admin token available")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            response = self.session.get(f"{BASE_URL}/admin/users", headers=headers)
+            
+            if response.status_code == 200:
+                users = response.json()
+                # Find our test user
+                test_user = next((u for u in users if u["username"] == TEST_USER_DATA["username"]), None)
+                if test_user:
+                    self.test_user_id = test_user["id"]
+                    approved_status = test_user.get("approved_by_admin", False)
+                    self.log_result("Admin Get Users", True, f"Found {len(users)} users, test user approval status: {approved_status}")
+                    return True
+                else:
+                    self.log_result("Admin Get Users", False, f"Test user not found in {len(users)} users")
+                    return False
+            else:
+                error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
+                self.log_result("Admin Get Users", False, f"Failed to get users: {error_msg}")
+                return False
+        except Exception as e:
+            self.log_result("Admin Get Users", False, f"Get users request failed: {str(e)}")
+            return False
+    
+    def test_admin_approve_user(self):
+        """Test admin can approve users"""
+        if not self.admin_token or not self.test_user_id:
+            self.log_result("Admin Approve User", False, "Missing admin token or user ID")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            response = self.session.post(f"{BASE_URL}/admin/approve-user/{self.test_user_id}", headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.log_result("Admin Approve User", True, "User approved successfully", data.get("message"))
+                return True
+            else:
+                error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
+                self.log_result("Admin Approve User", False, f"User approval failed: {error_msg}")
+                return False
+        except Exception as e:
+            self.log_result("Admin Approve User", False, f"User approval request failed: {str(e)}")
+            return False
+    
+    def test_user_login_after_approval(self):
+        """Test user can login after admin approval"""
+        try:
+            login_data = {
+                "username": TEST_USER_DATA["username"],
+                "password": TEST_USER_DATA["password"]
+            }
+            response = self.session.post(f"{BASE_URL}/auth/login", json=login_data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.user_token = data.get("access_token")
+                user_info = data.get("user", {})
+                
+                if user_info.get("role") == "user":
+                    self.log_result("User Login After Approval", True, f"User logged in successfully as {user_info.get('username')}")
+                    return True
+                else:
+                    self.log_result("User Login After Approval", False, f"Wrong user role: {user_info.get('role')}")
+                    return False
+            else:
+                error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
+                self.log_result("User Login After Approval", False, f"User login failed: {error_msg}")
+                return False
+        except Exception as e:
+            self.log_result("User Login After Approval", False, f"User login request failed: {str(e)}")
+            return False
+    
+    def test_protected_route_access(self):
+        """Test protected route access with user token"""
+        if not self.user_token:
+            self.log_result("Protected Route Access", False, "No user token available")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.user_token}"}
+            response = self.session.get(f"{BASE_URL}/auth/me", headers=headers)
+            
+            if response.status_code == 200:
+                user_info = response.json()
+                expected_username = TEST_USER_DATA["username"]
+                if user_info.get("username") == expected_username:
+                    self.log_result("Protected Route Access", True, f"Successfully accessed protected route as {expected_username}")
+                    return True
+                else:
+                    self.log_result("Protected Route Access", False, f"Wrong user info returned: {user_info}")
+                    return False
+            else:
+                error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
+                self.log_result("Protected Route Access", False, f"Protected route access failed: {error_msg}")
+                return False
+        except Exception as e:
+            self.log_result("Protected Route Access", False, f"Protected route request failed: {str(e)}")
+            return False
+    
+    def test_create_admin_tip(self):
+        """Test creating admin tips"""
+        if not self.admin_token:
+            self.log_result("Create Admin Tip", False, "No admin token available")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            response = self.session.post(f"{BASE_URL}/admin/tips", json=TEST_TIP_DATA, headers=headers)
+            
+            if response.status_code == 200:
+                tip = response.json()
+                self.test_tip_id = tip.get("id")
+                match_info = tip.get("match_info")
+                prediction = tip.get("prediction")
+                confidence = tip.get("confidence")
+                self.log_result("Create Admin Tip", True, f"Tip created: {match_info} - Prediction: {prediction} ({confidence}%)")
+                return True
+            else:
+                error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
+                self.log_result("Create Admin Tip", False, f"Tip creation failed: {error_msg}")
+                return False
+        except Exception as e:
+            self.log_result("Create Admin Tip", False, f"Tip creation request failed: {str(e)}")
+            return False
+    
+    def test_get_admin_tips(self):
+        """Test retrieving admin tips"""
+        if not self.admin_token:
+            self.log_result("Get Admin Tips", False, "No admin token available")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            response = self.session.get(f"{BASE_URL}/admin/tips", headers=headers)
+            
+            if response.status_code == 200:
+                tips = response.json()
+                if len(tips) > 0:
+                    tip = tips[0]
+                    self.log_result("Get Admin Tips", True, f"Retrieved {len(tips)} tips. Latest: {tip.get('match_info')}")
+                    return True
+                else:
+                    self.log_result("Get Admin Tips", True, "No tips found (empty list)")
+                    return True
+            else:
+                error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
+                self.log_result("Get Admin Tips", False, f"Failed to get tips: {error_msg}")
+                return False
+        except Exception as e:
+            self.log_result("Get Admin Tips", False, f"Get tips request failed: {str(e)}")
+            return False
+    
+    def test_get_public_tips(self):
+        """Test retrieving public tips as regular user"""
+        if not self.user_token:
+            self.log_result("Get Public Tips", False, "No user token available")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.user_token}"}
+            response = self.session.get(f"{BASE_URL}/tips", headers=headers)
+            
+            if response.status_code == 200:
+                tips = response.json()
+                self.log_result("Get Public Tips", True, f"User can access {len(tips)} public tips")
+                return True
+            else:
+                error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
+                self.log_result("Get Public Tips", False, f"Failed to get public tips: {error_msg}")
+                return False
+        except Exception as e:
+            self.log_result("Get Public Tips", False, f"Get public tips request failed: {str(e)}")
+            return False
+    
+    def test_update_admin_tip(self):
+        """Test updating admin tip with result"""
+        if not self.admin_token or not self.test_tip_id:
+            self.log_result("Update Admin Tip", False, "Missing admin token or tip ID")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            update_data = {
+                "result": "1",  # Home win
+                "status": "won"
+            }
+            response = self.session.put(f"{BASE_URL}/admin/tips/{self.test_tip_id}", json=update_data, headers=headers)
+            
+            if response.status_code == 200:
+                tip = response.json()
+                result = tip.get("result")
+                status = tip.get("status")
+                self.log_result("Update Admin Tip", True, f"Tip updated - Result: {result}, Status: {status}")
+                return True
+            else:
+                error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
+                self.log_result("Update Admin Tip", False, f"Tip update failed: {error_msg}")
+                return False
+        except Exception as e:
+            self.log_result("Update Admin Tip", False, f"Tip update request failed: {str(e)}")
+            return False
+    
+    def test_statistics_api(self):
+        """Test statistics endpoint"""
+        if not self.user_token:
+            self.log_result("Statistics API", False, "No user token available")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.user_token}"}
+            response = self.session.get(f"{BASE_URL}/stats", headers=headers)
+            
+            if response.status_code == 200:
+                stats = response.json()
+                admin_stats = stats.get("admin_tips", {})
+                ai_stats = stats.get("ai_predictions", {})
+                
+                admin_total = admin_stats.get("total", 0)
+                admin_accuracy = admin_stats.get("accuracy", 0)
+                ai_total = ai_stats.get("total", 0)
+                ai_accuracy = ai_stats.get("accuracy", 0)
+                
+                self.log_result("Statistics API", True, 
+                    f"Admin tips: {admin_total} total, {admin_accuracy}% accuracy | AI predictions: {ai_total} total, {ai_accuracy}% accuracy")
+                return True
+            else:
+                error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
+                self.log_result("Statistics API", False, f"Statistics request failed: {error_msg}")
+                return False
+        except Exception as e:
+            self.log_result("Statistics API", False, f"Statistics request failed: {str(e)}")
+            return False
+    
+    def test_role_based_access_control(self):
+        """Test that regular users cannot access admin endpoints"""
+        if not self.user_token:
+            self.log_result("Role-Based Access Control", False, "No user token available")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.user_token}"}
+            
+            # Try to access admin users endpoint
+            response = self.session.get(f"{BASE_URL}/admin/users", headers=headers)
+            
+            if response.status_code == 403:
+                error_msg = response.json().get("detail", "")
+                if "admin" in error_msg.lower() or "negado" in error_msg.lower():
+                    self.log_result("Role-Based Access Control", True, "Regular user correctly blocked from admin endpoint")
+                    return True
+                else:
+                    self.log_result("Role-Based Access Control", False, f"Wrong error message: {error_msg}")
+                    return False
+            else:
+                self.log_result("Role-Based Access Control", False, f"Should have been blocked but got status {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_result("Role-Based Access Control", False, f"Access control test failed: {str(e)}")
+            return False
+    
+    def test_admin_deactivate_user(self):
+        """Test admin can deactivate users"""
+        if not self.admin_token or not self.test_user_id:
+            self.log_result("Admin Deactivate User", False, "Missing admin token or user ID")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            response = self.session.post(f"{BASE_URL}/admin/deactivate-user/{self.test_user_id}", headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.log_result("Admin Deactivate User", True, "User deactivated successfully", data.get("message"))
+                return True
+            else:
+                error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
+                self.log_result("Admin Deactivate User", False, f"User deactivation failed: {error_msg}")
+                return False
+        except Exception as e:
+            self.log_result("Admin Deactivate User", False, f"User deactivation request failed: {str(e)}")
+            return False
+    
+    def test_delete_admin_tip(self):
+        """Test deleting admin tip"""
+        if not self.admin_token or not self.test_tip_id:
+            self.log_result("Delete Admin Tip", False, "Missing admin token or tip ID")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.admin_token}"}
+            response = self.session.delete(f"{BASE_URL}/admin/tips/{self.test_tip_id}", headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.log_result("Delete Admin Tip", True, "Tip deleted successfully", data.get("message"))
+                return True
+            else:
+                error_msg = response.json().get("detail", "Unknown error") if response.content else f"Status {response.status_code}"
+                self.log_result("Delete Admin Tip", False, f"Tip deletion failed: {error_msg}")
+                return False
+        except Exception as e:
+            self.log_result("Delete Admin Tip", False, f"Tip deletion request failed: {str(e)}")
+            return False
+    
+    def run_all_tests(self):
+        """Run all backend tests in sequence"""
+        print("🚀 Starting Núcleo Bets Backend API Tests")
+        print("=" * 60)
+        
+        # Test sequence
+        tests = [
+            self.test_api_health,
+            self.test_user_registration,
+            self.test_user_login_before_approval,
+            self.test_admin_login,
+            self.test_admin_get_users,
+            self.test_admin_approve_user,
+            self.test_user_login_after_approval,
+            self.test_protected_route_access,
+            self.test_create_admin_tip,
+            self.test_get_admin_tips,
+            self.test_get_public_tips,
+            self.test_update_admin_tip,
+            self.test_statistics_api,
+            self.test_role_based_access_control,
+            self.test_admin_deactivate_user,
+            self.test_delete_admin_tip
+        ]
+        
+        for test in tests:
+            test()
+            time.sleep(0.5)  # Small delay between tests
+        
+        # Summary
+        print("\n" + "=" * 60)
+        print("📊 TEST SUMMARY")
+        print("=" * 60)
+        
+        passed = sum(1 for r in self.results if r["success"])
+        total = len(self.results)
+        
+        print(f"Total Tests: {total}")
+        print(f"Passed: {passed}")
+        print(f"Failed: {total - passed}")
+        print(f"Success Rate: {(passed/total)*100:.1f}%")
+        
+        if total - passed > 0:
+            print("\n❌ FAILED TESTS:")
+            for result in self.results:
+                if not result["success"]:
+                    print(f"  - {result['test']}: {result['message']}")
+        
+        return passed == total
+
+if __name__ == "__main__":
+    tester = NucleoBetstester()
+    success = tester.run_all_tests()
+    exit(0 if success else 1)
